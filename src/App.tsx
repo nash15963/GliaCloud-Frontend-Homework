@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 
 function App() {
   const [currentTimestamp, setCurrentTimestamp] = useState<number | null>(null);
+  const [currentTime, setCurrentTime] = useState<number>(0);
 
   const videoProcessMutation = useMutation({
     mutationFn: async (file: File) => await videoApi.processVideo(file),
@@ -49,6 +50,7 @@ function App() {
       <TranscriptBlock 
         videoDataMutation={videoDataMutaion} 
         onTimestampClick={setCurrentTimestamp}
+        currentTime={currentTime}
       />
 
       {/* Right side - Preview */}
@@ -57,6 +59,7 @@ function App() {
         handleVideoProcess={videoProcessMutation.mutate}
         currentTimestamp={currentTimestamp}
         onTimestampHandled={() => setCurrentTimestamp(null)}
+        onTimeUpdate={setCurrentTime}
         state={{
           videoProcessMutation,
         }}
@@ -66,9 +69,3 @@ function App() {
 }
 
 export default App;
-
-
-// 我希望增加一個點擊時間戳的功能，當用戶點擊時間戳時，影片跳轉到相應的時間點並播放。
-// 這個 state 的機制會從 App.tsx 傳遞到 VideoPlayerBlock 和 TranscriptBlock 中，讓它們可以共享狀態和方法。
-// TranscriptBlock 點擊時間戳記會去修改變數
-// VideoPlayerBlock 接收這個變數，根據這個變數來控制影片的播放位置

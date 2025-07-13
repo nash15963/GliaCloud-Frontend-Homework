@@ -8,9 +8,10 @@ interface CustomVideoPlayerProps {
   height?: string | number;
   currentTimestamp?: number | null;
   onTimestampHandled?: () => void;
+  onTimeUpdate?: (time: number) => void;
 }
 
-const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimestamp, onTimestampHandled }: CustomVideoPlayerProps) => {
+const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimestamp, onTimestampHandled, onTimeUpdate }: CustomVideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -117,6 +118,7 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
 
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
+      onTimeUpdate?.(video.currentTime);
     };
 
     const handleDurationChange = () => {

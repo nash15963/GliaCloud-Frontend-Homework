@@ -14,6 +14,7 @@ interface TransformSection {
 interface Props {
   videoDataMutation?: UseMutationResult<ApiResponse, Error, string | undefined, unknown>;
   onTimestampClick?: (timestamp: number) => void;
+  currentTime?: number;
 }
 
 // Pure function to transform videoDataMutation data
@@ -35,8 +36,13 @@ const transformVideoData = (videoData?: TRawVideoData): TransformSection[] => {
     .filter((section) => section.script.length > 0);
 };
 
-const TranscriptBlock = ({ videoDataMutation, onTimestampClick }: Props) => {
+const TranscriptBlock = ({ videoDataMutation, onTimestampClick, currentTime = 0 }: Props) => {
   const transformedData = transformVideoData(videoDataMutation?.data?.data);
+
+  // Check if a script item is currently playing (within 1 second window)
+  const isCurrentlyPlaying = (startTime: number) => {
+    return Math.abs(currentTime - startTime) < 1;
+  };
 
   return (
     <div
@@ -63,12 +69,19 @@ const TranscriptBlock = ({ videoDataMutation, onTimestampClick }: Props) => {
           </h4>
           
           <div className="space-y-2">
-            {section.script.map((scriptItem, scriptIndex) => (
-              <div
-                key={scriptIndex}
-                className="p-3 bg-white border-l-4 border-blue-400 rounded-r-md hover:bg-gray-100 transition-colors cursor-pointer"
-                onClick={() => onTimestampClick?.(scriptItem.startTime)}
-              >
+            {section.script.map((scriptItem, scriptIndex) => {
+              const isHighlighted = isCurrentlyPlaying(scriptItem.startTime);
+              return (
+                <div
+                  key={scriptIndex}
+                  className={`p-3 border-l-4 rounded-r-md hover:bg-gray-100 transition-colors cursor-pointer ${
+                    isHighlighted 
+                      ? 'bg-blue-100 border-blue-600 shadow-md' 
+                      : 'bg-white border-blue-400'
+                  }`}
+                  onClick={() => onTimestampClick?.(scriptItem.startTime)}
+                >
+              
                 <div className="flex items-start gap-3">
                   <span 
                     className="text-xs text-gray-500 font-mono min-w-max hover:text-blue-600 cursor-pointer"
@@ -83,8 +96,9 @@ const TranscriptBlock = ({ videoDataMutation, onTimestampClick }: Props) => {
                     {scriptItem.text}
                   </span>
                 </div>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}
