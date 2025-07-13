@@ -6,12 +6,14 @@ import type { ApiEndpoints } from '@/types/api'
 interface Props {
   src: string;
   handleVideoProcess: (file: File) => void;
+  currentTimestamp?: number | null;
+  onTimestampHandled?: () => void;
   state : {
     videoProcessMutation: UseMutationResult<ApiEndpoints["IVideoProcess"]["response"], Error, File, unknown>;
   }
 }
 
-const VideoPlayerBlock = ({ src, handleVideoProcess, state }: Props) => {
+const VideoPlayerBlock = ({ src, handleVideoProcess, currentTimestamp, onTimestampHandled, state }: Props) => {
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null)
   const [videoSrc, setVideoSrc] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -56,7 +58,13 @@ const VideoPlayerBlock = ({ src, handleVideoProcess, state }: Props) => {
         </button>
       </div>
 
-      {videoSrc && <VideoPlayer src={src} />}
+      {videoSrc && (
+        <VideoPlayer 
+          src={src} 
+          currentTimestamp={currentTimestamp}
+          onTimestampHandled={onTimestampHandled}
+        />
+      )}
     </div>
   );
 }

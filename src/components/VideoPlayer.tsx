@@ -6,9 +6,11 @@ interface CustomVideoPlayerProps {
   src: string;
   width?: string | number;
   height?: string | number;
+  currentTimestamp?: number | null;
+  onTimestampHandled?: () => void;
 }
 
-const CustomVideoPlayer = ({ src, width = "100%", height = "100%" }: CustomVideoPlayerProps) => {
+const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimestamp, onTimestampHandled }: CustomVideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -154,9 +156,21 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%" }: CustomVideo
     };
   }, []);
 
+  useEffect(() => {
+    if (currentTimestamp !== null && currentTimestamp !== undefined) {
+      seekTo(currentTimestamp);
+      const video = videoRef.current;
+      if (video && video.paused) {
+        video.play();
+        setIsPlaying(true);
+      }
+      onTimestampHandled?.();
+    }
+  }, [currentTimestamp]);
+
   return (
     <div className="video-player-wrapper flex flex-col gap-3">
-      {/* 視頻播放區域 - 無原生控制器 */}
+      {/* Video playback area - no native controls */}
       <div className="rounded-xl overflow-hidden shadow-md w-full bg-black relative">
         <video
           ref={videoRef}
@@ -164,13 +178,13 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%" }: CustomVideo
           height={height}
           className="w-full h-auto"
           preload="metadata"
-          // 移除 controls 屬性，不顯示原生控制器
+          // Remove controls attribute to hide native controls
         />
         
-        {/* 載入指示器 */}
+        {/* Loading indicator */}
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="text-white text-sm">載入中...</div>
+            <div className="text-white text-sm">Loading...</div>
           </div>
         )}
       </div>

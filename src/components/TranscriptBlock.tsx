@@ -13,6 +13,7 @@ interface TransformSection {
 }
 interface Props {
   videoDataMutation?: UseMutationResult<ApiResponse, Error, string | undefined, unknown>;
+  onTimestampClick?: (timestamp: number) => void;
 }
 
 // Pure function to transform videoDataMutation data
@@ -34,7 +35,7 @@ const transformVideoData = (videoData?: TRawVideoData): TransformSection[] => {
     .filter((section) => section.script.length > 0);
 };
 
-const TranscriptBlock = ({ videoDataMutation }: Props) => {
+const TranscriptBlock = ({ videoDataMutation, onTimestampClick }: Props) => {
   const transformedData = transformVideoData(videoDataMutation?.data?.data);
 
   return (
@@ -66,9 +67,16 @@ const TranscriptBlock = ({ videoDataMutation }: Props) => {
               <div
                 key={scriptIndex}
                 className="p-3 bg-white border-l-4 border-blue-400 rounded-r-md hover:bg-gray-100 transition-colors cursor-pointer"
+                onClick={() => onTimestampClick?.(scriptItem.startTime)}
               >
                 <div className="flex items-start gap-3">
-                  <span className="text-xs text-gray-500 font-mono min-w-max">
+                  <span 
+                    className="text-xs text-gray-500 font-mono min-w-max hover:text-blue-600 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTimestampClick?.(scriptItem.startTime);
+                    }}
+                  >
                     {Math.floor(scriptItem.startTime / 60)}:{Math.floor(scriptItem.startTime % 60).toString().padStart(2, '0')}
                   </span>
                   <span className="text-sm text-gray-800">
