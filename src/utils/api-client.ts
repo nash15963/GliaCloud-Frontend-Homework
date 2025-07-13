@@ -1,115 +1,91 @@
-import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
-import type { ApiModel, ApiClient } from '@/types/utils/http';
+import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
+import type { 
+  ApiEndpointKey, 
+  ApiResponse, 
+  ApiBody, 
+  ApiParams 
+} from "@/types/utils/http";
+import { endpointConfig } from "@/types/api";
 
-// Create axios instance with base configuration
-const createAxiosInstance = (): AxiosInstance => {
-  const instance = axios.create({
-    baseURL: '/api',
-    timeout: 30000,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+// Axios instance with default configuration
+const axiosInstance: AxiosInstance = axios.create({
+  baseURL: "/api",
+  timeout: 30000,
+});
 
-  // Response interceptor - handle common errors
-  instance.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      // Log errors for debugging
-      console.error('API Error:', error);
-      return Promise.reject(error);
-    }
-  );
-
-  return instance;
-};
-
-// Build URL with path parameters
-const buildUrl = (url: string, params?: Record<string, string>): string => {
-  let builtUrl = url;
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      builtUrl = builtUrl.replace(`:${key}`, encodeURIComponent(value));
-    });
+// Error interceptor
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("API Error:", error);
+    return Promise.reject(error);
   }
-  return builtUrl;
+);
+
+// URL builder function
+const buildUrl = (url: string, params?: Record<string, string>): string => {
+  if (!params) return url;
+  return Object.entries(params).reduce((acc, [key, value]) => acc.replace(`:${key}`, encodeURIComponent(value)), url);
 };
 
-// Build query parameters
-const buildQuery = (query?: Record<string, string | number | boolean>): Record<string, string> => {
-  if (!query) return {};
-  
-  const result: Record<string, string> = {};
-  Object.entries(query).forEach(([key, value]) => {
-    result[key] = String(value);
-  });
-  
-  return result;
+
+// Type-safe request parameters
+type RequestOptions<K extends ApiEndpointKey> = {
+  params?: ApiParams<K> extends never ? never : ApiParams<K>;
+  body?: ApiBody<K> extends never ? never : ApiBody<K>;
+  headers?: Record<string, string>;
 };
 
-// Create the API client implementation
-export const createApiClient = (): ApiClient => {
-  const axiosInstance = createAxiosInstance();
+// Enhanced API client with endpoint key support
+export interface TypedApiClient {
+  request<K extends ApiEndpointKey>(
+    endpointKey: K,
+    options?: RequestOptions<K>
+  ): Promise<ApiResponse<K>>;
+}
 
-  return {
-    async request<T extends ApiModel<string, unknown, unknown, Record<string, string>>>(
-      endpoint: T
-    ): Promise<T["response"]> {
-      try {
-        // Build URL with path parameters
-        const url = buildUrl(endpoint.url, endpoint.params);
+// Create typed API client
+export const createApiClient = (): TypedApiClient => ({
+  async request<K extends ApiEndpointKey>(
+    endpointKey: K,
+    options: RequestOptions<K> = {} as RequestOptions<K>
+  ): Promise<ApiResponse<K>> {
+    try {
+      const config = endpointConfig[endpointKey];
+      const url = buildUrl(config.url, options.params as Record<string, string>);
 
-        // Prepare axios config
-        const config: AxiosRequestConfig = {
-          method: endpoint.method,
-          url,
-          headers: endpoint.headers,
-          params: buildQuery(endpoint.query),
-          responseType: endpoint.responseType || 'json',
-        };
+      const axiosConfig: AxiosRequestConfig = {
+        method: config.method,
+        url,
+        headers: options.headers || {
+          "Content-Type": options.body instanceof FormData ? "multipart/form-data" : "application/json",
+        },
+      };
 
-        // Handle request body
-        if (endpoint.body && ['POST', 'PUT', 'PATCH'].includes(endpoint.method)) {
-          if (endpoint.body instanceof FormData) {
-            config.data = endpoint.body;
-            // Remove Content-Type to let axios set it for FormData
-            if (config.headers) {
-              delete config.headers['Content-Type'];
-            }
-          } else {
-            config.data = endpoint.body;
-          }
-        }
-
-        // Make the request
-        const response = await axiosInstance.request(config);
-
-        // Return the backend response directly (backend controls success/data structure)
-        return response.data as T["response"];
-
-      } catch (error) {
-        // Handle axios errors
-        if (axios.isAxiosError(error)) {
-          console.error('API Error:', {
-            url: endpoint.url,
-            method: endpoint.method,
-            status: error.response?.status,
-            message: error.response?.data?.message || error.message,
-          });
-
-          // If backend returns error response with data, use that
-          if (error.response?.data) {
-            return error.response.data as T["response"];
-          }
-        }
-
-        // Handle unexpected errors - re-throw to let caller handle
-        console.error('Unexpected Error:', error);
-        throw error;
+      if (options.body && ["POST", "PUT", "PATCH"].includes(config.method)) {
+        axiosConfig.data = options.body;
       }
-    },
-  };
-};
 
-// Export default instance
+      const { data } = await axiosInstance.request(axiosConfig);
+
+      return data as ApiResponse<K>;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        console.error("API Error:", {
+          endpointKey,
+          url: endpointConfig[endpointKey].url,
+          method: endpointConfig[endpointKey].method,
+          status: error.response.status,
+          data: error.response.data,
+        });
+        return error.response.data as ApiResponse<K>;
+      }
+
+      console.error("Unexpected Error:", error);
+      throw error;
+    }
+  },
+});
+
+// Default export for convenience
 export const apiClient = createApiClient();

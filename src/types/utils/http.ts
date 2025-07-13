@@ -15,7 +15,7 @@ export type ExtractQuery<T extends string> = T extends `${infer _Path}?${infer _
 // Enhanced API model with type-safe params and query
 export interface ApiModel<
   TRoute extends string,
-  TResponse,
+  TResponse = unknown,
   TBody = never,
   THeaders extends Record<string, string> = Record<string, string>
 > {
@@ -26,16 +26,34 @@ export interface ApiModel<
   params?: ExtractParams<TRoute>;
   query?: ExtractQuery<TRoute>;
   responseType?: "json" | "text" | "blob";
-  response: {
-    success: boolean;
-    data?: TResponse;
-  }
+  response: TResponse;
 }
 
 // API endpoint helper type
 export type ApiEndpoint<T extends ApiModel<string, unknown, unknown, Record<string, string>>> = T;
 
+// Request parameters type for different endpoint configurations
+export type RequestParams<T extends ApiModel<string, unknown, unknown, Record<string, string>>> = 
+  {} & 
+  (T extends { body: infer B } ? { body: B } : {}) &
+  (T extends { params: infer P } ? { params: P } : {}) &
+  (T extends { query: infer Q } ? { query: Q } : {}) &
+  (T extends { headers: infer H } ? { headers: H } : {});
+
 // API client type helper with better typing
 export type ApiClient = {
   request<T extends ApiModel<string, unknown, unknown, Record<string, string>>>(endpoint: T): Promise<T["response"]>;
 };
+
+
+
+// Import ApiEndpoints for type helpers
+import type { ApiEndpoints } from '@/types/api';
+
+// Type helpers for extracting endpoint properties
+export type ApiEndpointKey = keyof ApiEndpoints;
+export type ApiEndpointConfig<K extends ApiEndpointKey> = ApiEndpoints[K];
+export type ApiResponse<K extends ApiEndpointKey> = ApiEndpoints[K]['response'];
+export type ApiBody<K extends ApiEndpointKey> = ApiEndpoints[K] extends { body: infer B } ? B : never;
+export type ApiParams<K extends ApiEndpointKey> = ApiEndpoints[K] extends { params: infer P } ? P : never;
+export type EndpointConfigItem = { url: string; method: TMethod };

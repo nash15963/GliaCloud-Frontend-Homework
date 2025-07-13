@@ -1,4 +1,4 @@
-import type { ITranscriptData, IVideoProcessResponse } from '@/types/domain/video'
+import type { ITranscriptData, IVideoProcessResponse } from '@/types/api'
 
 // Mock data for video transcript using proper types
 export const mockTranscriptData: ITranscriptData = {
@@ -88,8 +88,84 @@ export const mockTranscriptData: ITranscriptData = {
   aiSuggestions: ["s2", "s4", "s5", "s7"],
 }
 
-export const createMockVideoProcessResponse = (videoFile: File): IVideoProcessResponse => ({
-  videoId: 'mock-video-id-' + Date.now(),
-  fileName: videoFile?.name || 'uploaded-video.mp4',
-  transcript: mockTranscriptData
-})
+export const createMockVideoProcessResponse = (videoFile: File | null): IVideoProcessResponse => {
+  const fileName = videoFile?.name || 'uploaded-video.mp4';
+  const videoId = 'mock-video-id-' + Date.now();
+  
+  return {
+    videoId,
+    fileName,
+    transcript: mockTranscriptData
+  };
+}
+
+export const mockMetaData = {
+  videoId: "vid_1234567890",
+  title: "Sample Video for AI Highlights",
+  duration: 3600,
+  hlsStreamUrl: "https://yourdomain.com/videos/vid_1234567890/master.m3u8",
+  thumbnailUrl: "https://yourdomain.com/videos/vid_1234567890/thumb.jpg",
+  transcript: {
+    sections: [
+      {
+        sectionId: "sec_001",
+        title: "影片開場介紹",
+        startTime: 0,
+        endTime: 120,
+        sentences: [
+          {
+            id: "s1",
+            timestamp: 5,
+            text: "歡迎收看這個影片，我們將介紹精彩內容。",
+          },
+          {
+            id: "s2",
+            timestamp: 15,
+            text: "本影片將介紹多個有趣的主題。",
+          },
+        ],
+      },
+      {
+        sectionId: "sec_002",
+        title: "主要內容",
+        startTime: 121,
+        endTime: 3590,
+        sentences: [
+          {
+            id: "s101",
+            timestamp: 130,
+            text: "接下來我們會討論第一個重點。",
+          },
+          {
+            id: "s102",
+            timestamp: 150,
+            text: "這個概念非常重要，請仔細聽。",
+          },
+        ],
+      },
+      {
+        sectionId: "sec_003",
+        title: "影片總結",
+        startTime: 3591,
+        endTime: 3600,
+        sentences: [
+          {
+            id: "s201",
+            timestamp: 3592,
+            text: "謝謝大家的收看。",
+          },
+        ],
+      },
+    ],
+  },
+  suggestedHighlights: [
+    {
+      sentenceId: "s2",
+      reason: "影片開頭介紹內容的關鍵句子。",
+    },
+    {
+      sentenceId: "s102",
+      reason: "重點清晰，適合納入精華片段。",
+    },
+  ],
+} as const;

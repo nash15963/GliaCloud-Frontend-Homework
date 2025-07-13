@@ -1,10 +1,4 @@
 import { apiClient } from '@/utils/api-client';
-import type { 
-  IVideoProcess, 
-  IGetTranscript, 
-  IUpdateHighlights, 
-  IGenerateHighlights 
-} from '@/types/api';
 
 // Video API service using the typed API client
 export class VideoApiService {
@@ -13,21 +7,18 @@ export class VideoApiService {
     const formData = new FormData();
     formData.append('video', videoFile);
 
-    return apiClient.request<IVideoProcess>({
-      url: '/api/video/process',
-      method: 'POST',
+    return apiClient.request('IVideoProcess', {
       body: formData,
-      response: { success: true, data: undefined },
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
   }
 
   // Get video transcript
   static async getTranscript(videoId: string) {
-    return apiClient.request<IGetTranscript>({
-      url: '/api/video/:videoId/transcript',
-      method: 'GET',
+    return apiClient.request('IGetTranscript', {
       params: { videoId },
-      response: { success: true, data: undefined },
     });
   }
 
@@ -36,22 +27,16 @@ export class VideoApiService {
     videoId: string, 
     sentences: Array<{ id: string; isHighlight: boolean }>
   ) {
-    return apiClient.request<IUpdateHighlights>({
-      url: '/api/video/:videoId/highlights',
-      method: 'PATCH',
+    return apiClient.request("IUpdateHighlights", {
       params: { videoId },
       body: { sentences },
-      response: { success: true, data: undefined },
     });
   }
 
   // Generate highlight video
   static async generateHighlights(videoId: string) {
-    return apiClient.request<IGenerateHighlights>({
-      url: '/api/video/:videoId/generate-highlights',
-      method: 'POST',
+    return apiClient.request('IGenerateHighlights', {
       params: { videoId },
-      response: { success: true, data: undefined },
     });
   }
 }
