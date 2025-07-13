@@ -27,6 +27,10 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
   const [bufferedRanges, setBufferedRanges] = useState<Array<{start: number, end: number}>>([]);
   const [currentSubtitle, setCurrentSubtitle] = useState<string>("");
   const [showSubtitles, setShowSubtitles] = useState<boolean>(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragTime, setDragTime] = useState(0);
+  const [hoverTime, setHoverTime] = useState<number | null>(null);
+  const [hoverPosition, setHoverPosition] = useState(0);
 
   const initializeHls = useCallback(() => {
     const video = videoRef.current;
@@ -104,6 +108,76 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
   const toggleSubtitles = useCallback(() => {
     setShowSubtitles(prev => !prev);
   }, []);
+
+  // Handle progress bar dragging
+  const handleProgressMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+    const newTime = percentage * duration;
+    setDragTime(newTime);
+  }, [duration]);
+
+  const handleProgressMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
+    
+    const progressBar = document.querySelector('.progress-bar-container') as HTMLElement;
+    if (!progressBar) return;
+    
+    const rect = progressBar.getBoundingClientRect();
+    const moveX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, moveX / rect.width));
+    const newTime = percentage * duration;
+    setDragTime(newTime);
+  }, [isDragging, duration]);
+
+  const handleProgressMouseUp = useCallback(() => {
+    if (isDragging) {
+      seekTo(dragTime);
+      setIsDragging(false);
+    }
+  }, [isDragging, dragTime, seekTo]);
+
+  // Add global mouse event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleProgressMouseMove);
+      document.addEventListener('mouseup', handleProgressMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleProgressMouseMove);
+        document.removeEventListener('mouseup', handleProgressMouseUp);
+      };
+    }
+  }, [isDragging]);
+
+  // Handle hover for time preview
+  const handleProgressMouseEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const hoverX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, hoverX / rect.width));
+    const time = percentage * duration;
+    setHoverTime(time);
+    setHoverPosition(hoverX);
+  }, [duration]);
+
+  const handleProgressMouseLeave = useCallback(() => {
+    setHoverTime(null);
+  }, []);
+
+  const handleProgressMouseHover = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (isDragging) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const hoverX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, hoverX / rect.width));
+    const time = percentage * duration;
+    setHoverTime(time);
+    setHoverPosition(hoverX);
+  }, [duration, isDragging]);
 
   const formatTime = (timeInSeconds: number): string => {
     const minutes = Math.floor(timeInSeconds / 60);
@@ -242,19 +316,19 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
 
       <div className="flex flex-col gap-3 p-4 bg-gray-50 rounded-lg">
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500 font-mono min-w-max">
-            {formatTime(currentTime)}
+          <span className={`text-sm font-mono min-w-max transition-colors duration-200 ${
+            isDragging ? 'text-blue-600 font-semibold' : 'text-gray-500'
+          }`}>
+            {formatTime(isDragging ? dragTime : currentTime)}
           </span>
           <div className="flex-1 relative">
             {/* Custom progress bar container */}
             <div 
-              className="relative w-full h-2 bg-gray-200 rounded-lg cursor-pointer hover:h-3 transition-all duration-200 group"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const clickX = e.clientX - rect.left;
-                const percentage = clickX / rect.width;
-                seekTo(percentage * duration);
-              }}
+              className="progress-bar-container relative w-full h-2 bg-gray-200 rounded-lg cursor-pointer hover:h-3 transition-all duration-200 group select-none"
+              onMouseDown={handleProgressMouseDown}
+              onMouseEnter={handleProgressMouseEnter}
+              onMouseLeave={handleProgressMouseLeave}
+              onMouseMove={handleProgressMouseHover}
             >
               {/* Buffered ranges - gray background */}
               {bufferedRanges.map((range, index) => (
@@ -270,27 +344,44 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
               
               {/* Current progress - blue with hover effect */}
               <div
-                className="absolute h-full bg-blue-500 rounded-lg transition-all duration-100 group-hover:bg-blue-600"
+                className={`absolute h-full bg-blue-500 rounded-lg transition-all group-hover:bg-blue-600 ${
+                  isDragging ? 'duration-0' : 'duration-100'
+                }`}
                 style={{
-                  width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`
+                  width: `${duration > 0 ? ((isDragging ? dragTime : currentTime) / duration) * 100 : 0}%`
                 }}
               />
               
-              {/* Progress indicator dot - appears on hover */}
+              {/* Progress indicator dot - appears on hover or drag */}
               <div
-                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
+                className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-600 rounded-full shadow-lg transition-opacity duration-200 ${
+                  isDragging ? 'opacity-100 scale-125' : 'opacity-0 group-hover:opacity-100'
+                }`}
                 style={{
-                  left: `calc(${duration > 0 ? (currentTime / duration) * 100 : 0}% - 6px)`
+                  left: `calc(${duration > 0 ? ((isDragging ? dragTime : currentTime) / duration) * 100 : 0}% - 8px)`
                 }}
               />
               
+              {/* Time preview tooltip */}
+              {hoverTime !== null && !isDragging && (
+                <div 
+                  className="absolute bottom-full mb-2 px-2 py-1 bg-black bg-opacity-80 text-white text-xs rounded whitespace-nowrap pointer-events-none z-10"
+                  style={{
+                    left: `${hoverPosition}px`,
+                    transform: 'translateX(-50%)'
+                  }}
+                >
+                  {formatTime(hoverTime)}
+                </div>
+              )}
+
               {/* Invisible range input for accessibility */}
               <input
                 type="range"
                 min={0}
                 max={duration || 0}
-                value={currentTime}
-                onChange={(e) => seekTo(Number(e.target.value))}
+                value={isDragging ? dragTime : currentTime}
+                onChange={(e) => !isDragging && seekTo(Number(e.target.value))}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
             </div>
