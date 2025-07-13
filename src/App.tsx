@@ -1,42 +1,59 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from "@tanstack/react-query";
 import "./App.css";
 import TranscriptBlock from "./components/TranscriptBlock";
 import VideoPlayerBlock from "./components/VideoPlayerBlock";
-import { healthApi } from "./services/check-health";
+import { videoApi } from "./services/video";
+import { useEffect } from "react";
 
 function App() {
-  // Health check query
-  const { 
-    data,
-    isLoading: isHealthLoading, 
-    error: healthError,
-    isError: isHealthError 
-  } = useQuery({
-    queryKey: ['health'],
-    queryFn: healthApi.checkHealth,
+  const videoProcessMutation = useMutation({
+    mutationFn: async (file: File) => await videoApi.processVideo(file),
   });
 
-  if(isHealthLoading) {
-    return <div className="loading">Checking server health...</div>;
-  }
+  const videoDataMutaion = useMutation({
+    mutationFn: async (videoId: string | undefined) => {
+      if (!videoId) {
+        throw new Error("Video ID is required to fetch video data");
+      }
+      return await videoApi.getVideoData(videoId);
+    },
+  });
 
-  if(isHealthError && data?.success === false) {
-    return <div className="error">Error checking server health: {healthError.message}</div>;
-  }
+  const checkVideoStatus = useQuery({
+    queryKey: ["videoStatus", videoProcessMutation.data?.data.videoId],
+    queryFn: () => videoApi.checkVideoStatus(videoProcessMutation.data?.data.videoId || ""),
+    enabled: !!videoProcessMutation.data?.data.videoId && !videoDataMutaion.data?.success,
+    refetchInterval: 2000,
+  });
+
+  useEffect(() => {
+    if (checkVideoStatus.data?.data?.status === "completed") {
+      console.log("Video processing completed, fetching video data...");
+      videoDataMutaion.mutate(videoProcessMutation.data?.data.videoId);
+    }
+  }, [checkVideoStatus.data?.data?.status]);
 
   return (
-    <div className="bg-gray-200" style={{
-      display: "flex",
-      justifyContent: "space-around",
-      maxWidth: "1280px",
-      margin: "0 auto",
-      padding: "20px 0",
-    }}>
+    <div
+      className="bg-gray-200"
+      style={{
+        display: "flex",
+        justifyContent: "space-around",
+        maxWidth: "1280px",
+        margin: "0 auto",
+        padding: "20px 0",
+      }}>
       {/* Left side - Transcript */}
-        <TranscriptBlock />
+      <TranscriptBlock videoDataMutation={videoDataMutaion} />
 
       {/* Right side - Preview */}
-        <VideoPlayerBlock />
+      <VideoPlayerBlock
+        src={videoDataMutaion.data?.data?.url || ""}
+        handleVideoProcess={videoProcessMutation.mutate}
+        state={{
+          videoProcessMutation,
+        }}
+      />
     </div>
   );
 }

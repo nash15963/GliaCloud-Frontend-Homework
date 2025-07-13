@@ -15,27 +15,14 @@ export class VideoApiService {
     });
   }
 
-  // Get video transcript
-  static async getTranscript(videoId: string) {
-    return apiClient.request('IGetTranscript', {
+  static async checkVideoStatus(videoId: string) {
+    return apiClient.request('IVideoStatus', {
       params: { videoId },
     });
   }
 
-  // Update highlight selections
-  static async updateHighlights(
-    videoId: string, 
-    sentences: Array<{ id: string; isHighlight: boolean }>
-  ) {
-    return apiClient.request("IUpdateHighlights", {
-      params: { videoId },
-      body: { sentences },
-    });
-  }
-
-  // Generate highlight video
-  static async generateHighlights(videoId: string) {
-    return apiClient.request('IGenerateHighlights', {
+  static async getVideoData(videoId: string) {
+    return apiClient.request('IVideoData', {
       params: { videoId },
     });
   }
@@ -44,7 +31,6 @@ export class VideoApiService {
 // Export individual functions for convenience
 export const videoApi = {
   processVideo: VideoApiService.processVideo,
-  getTranscript: VideoApiService.getTranscript,
-  updateHighlights: VideoApiService.updateHighlights,
-  generateHighlights: VideoApiService.generateHighlights,
+  checkVideoStatus: VideoApiService.checkVideoStatus,
+  getVideoData: VideoApiService.getVideoData,
 };

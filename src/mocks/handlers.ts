@@ -1,6 +1,4 @@
 import { http, HttpResponse } from 'msw'
-import { mockTranscriptData, createMockVideoProcessResponse } from './mocks'
-import type { ISentence, ITranscriptSection } from '@/types/api'
 import { endpointConfig } from '@/types/api'
 import type { 
   ApiEndpointKey, 
@@ -8,6 +6,7 @@ import type {
   ApiBody, 
   ApiParams 
 } from '@/types/utils/http'
+import { aiGenMockData } from './mocks';
 
 // Type-safe handler creator for MSW
 type HandlerFunction<K extends ApiEndpointKey> = (params: {
@@ -57,111 +56,73 @@ function createTypedHandler<K extends ApiEndpointKey>(
         return HttpResponse.json({ success: false, error: errorMessage }, { status: 500 });
       }
     });
-  } else if (config.method === 'PATCH') {
-    return http.patch(url, async ({ request, params }) => {
-      const typedParams = params as ApiParams<K> extends never ? Record<string, never> : ApiParams<K>;
-      const body = await request.json() as ApiBody<K> extends never ? never : ApiBody<K>;
-      const result = await handler({ request, params: typedParams, body });
-      return HttpResponse.json(result);
-    });
-  }
+  } 
   // @ts-expect-error Unsupported method
   throw new Error(`Unsupported method: ${String(config.method)}`);
 }
 
 export const handlers = [
   // Type-safe health check handler
-  createTypedHandler('ICheckHealth', () => {
+  createTypedHandler("ICheckHealth", () => {
     return {
       success: true,
-      message: 'API is healthy'
+      message: "API is healthy",
+    };
+  }),
+
+  createTypedHandler("IVideoStatus", () => {
+    return {
+      success: true,
+      message: "video is successfully processed",
+      data: {
+        status: "completed",
+        progress: 100,
+      }
     };
   }),
 
   // Type-safe video processing handler
-  createTypedHandler('IVideoProcess', async ({ body }) => {
+  createTypedHandler("IVideoProcess", async ({ body }) => {
     try {
       // Check if body is FormData
       if (!body || !(body instanceof FormData)) {
-        throw new Error('Request body must be FormData');
+        throw new Error("Request body must be FormData");
       }
-      
-      const videoFile = body.get('video') as File;
-      
+
+      const videoFile = body.get("video") as File;
+
       // Check if video file exists
       if (!videoFile || !(videoFile instanceof File)) {
-        throw new Error('No video file provided');
+        throw new Error("No video file provided");
       }
-      
+
       // Simulate AI processing delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const responseData = createMockVideoProcessResponse(videoFile);
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       return {
         success: true,
-        message: 'Video processed successfully',
+        message: "Video processed successfully",
         data: {
-          videoId: responseData.videoId
-        }
+          videoId: "x36xhzz",
+        },
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       return {
         success: false,
         message: errorMessage,
         data: {
-          videoId: ''
-        }
+          videoId: "",
+        },
       };
     }
   }),
 
   // Type-safe transcript retrieval handler
-  createTypedHandler('IGetTranscript', () => {
+  createTypedHandler("IVideoData", () => {
     return {
       success: true,
-      data: mockTranscriptData
+      data: aiGenMockData,
     };
   }),
-
-  // Type-safe highlight updates handler
-  createTypedHandler('IUpdateHighlights', ({ body }) => {
-    const updates = body;
-    
-    // Mock updating sentences with new highlight status
-    const updatedSentences: ISentence[] = [];
-    mockTranscriptData.sections.forEach((section: ITranscriptSection) => {
-      section.sentences.forEach((sentence: ISentence) => {
-        const update = updates.sentences.find((s: { id: string; isHighlight: boolean }) => s.id === sentence.id);
-        if (update) {
-          updatedSentences.push({
-            ...sentence,
-            isHighlight: update.isHighlight
-          });
-        } else {
-          updatedSentences.push(sentence);
-        }
-      });
-    });
-    
-    return {
-      success: true,
-      data: { updatedSentences }
-    };
-  }),
-
-  // Type-safe highlight video generation handler
-  createTypedHandler('IGenerateHighlights', async () => {
-    // Simulate video generation delay
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    return {
-      success: true,
-      data: {
-        highlightVideoUrl: '/mock-highlight-video.mp4',
-        duration: 45
-      }
-    };
-  })
-]
+];

@@ -1,10 +1,6 @@
-// Video API endpoints definition
-
-import type { mockMetaData } from '@/mocks/mocks';
 import type { ApiEndpoint, EndpointConfigItem } from '@/types/utils/http';
 
-// Domain types for video transcript functionality
-export interface ISentence {
+interface ISentence {
   id: string;
   text: string;
   startTime: number;
@@ -12,7 +8,8 @@ export interface ISentence {
   isHighlight: boolean;
 }
 
-export interface ITranscriptSection {
+// Section type definition
+interface ISection {
   id: string;
   title: string;
   startTime: number;
@@ -20,16 +17,20 @@ export interface ITranscriptSection {
   sentences: ISentence[];
 }
 
-export interface ITranscriptData {
-  sections: ITranscriptSection[];
+// Transcript type definition
+interface ITranscript {
+  sections: ISection[];
   duration: number;
   aiSuggestions: string[];
 }
 
-export interface IVideoProcessResponse {
+// Video data type definition
+interface IVideoData {
   videoId: string;
   fileName: string;
-  transcript: ITranscriptData;
+  url: string;
+  duration: number;
+  transcript: ITranscript;
 }
 
 // api check health endpoint
@@ -71,72 +72,32 @@ export type IVideoStatus = ApiEndpoint<{
   };
 }>;
 
-// GET /api/video/:videoId/metadata
-export type IVideoMetadata = ApiEndpoint<{
-  url: "/video/:videoId/metadata";
+
+// GET /api/video/:videoId/data - Get complete video data including transcript
+export type IGetVideoData = ApiEndpoint<{
+  url: "/video/:videoId/data";
   method: "GET";
   params: { videoId: string };
   response: {
     success: boolean;
-    data?: typeof mockMetaData;
+    data?: IVideoData;
   };
 }>;
 
-// ---
 
-export type IGetTranscript = ApiEndpoint<{
-  url: "/video/:videoId/transcript";
-  method: "GET";
-  params: { videoId: string };
-  response: {
-    success: boolean;
-    data?: ITranscriptData;
-  };
-}>;
-
-export type IUpdateHighlights = ApiEndpoint<{
-  url: "/video/:videoId/highlights";
-  method: "PATCH";
-  params: { videoId: string };
-  body: {
-    sentences: Array<{
-      id: string;
-      isHighlight: boolean;
-    }>;
-  };
-  response: {
-    success: boolean;
-    data?: { updatedSentences: ISentence[] };
-  };
-}>;
-
-export type IGenerateHighlights = ApiEndpoint<{
-  url: "/video/:videoId/generate-highlights";
-  method: "POST";
-  params: { videoId: string };
-  response: {
-    success: boolean;
-    data?: {
-      highlightVideoUrl: string;
-      duration: number;
-    };
-  };
-}>;
 
 // Create a unified API endpoints mapping
 export interface ApiEndpoints {
   ICheckHealth: ICheckHealth;
   IVideoProcess: IVideoProcess;
-  IGetTranscript: IGetTranscript;
-  IUpdateHighlights: IUpdateHighlights;
-  IGenerateHighlights: IGenerateHighlights;
+  IVideoStatus: IVideoStatus;
+  IVideoData: IGetVideoData;
 }
 
 
 export const endpointConfig = {
   ICheckHealth: { url: "/health", method: "GET" },
   IVideoProcess: { url: "/video/process", method: "POST" },
-  IGetTranscript: { url: "/video/:videoId/transcript", method: "GET" },
-  IUpdateHighlights: { url: "/video/:videoId/highlights", method: "PATCH" },
-  IGenerateHighlights: { url: "/video/:videoId/generate-highlights", method: "POST" },
+  IVideoStatus: { url: "/video/:videoId/status", method: "GET" },
+  IVideoData: { url: "/video/:videoId/data", method: "GET" },
 } as const satisfies Record<keyof ApiEndpoints, EndpointConfigItem>;
