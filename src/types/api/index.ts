@@ -5,7 +5,6 @@ interface ISentence {
   text: string;
   startTime: number;
   endTime: number;
-  isHighlight: boolean;
 }
 
 // Section type definition
@@ -21,7 +20,15 @@ interface ISection {
 interface ITranscript {
   sections: ISection[];
   duration: number;
-  aiSuggestions: string[];
+}
+
+// Highlight clip type definition
+interface IHighlightClip {
+  id: string;
+  title: string;
+  startTime: number;
+  endTime: number;
+  description?: string;
 }
 
 // Video data type definition
@@ -31,6 +38,8 @@ interface IVideoData {
   url?: string;
   duration: number;
   transcript: ITranscript;
+  suggestedHighlights: IHighlightClip[];
+  aiSuggestions: string[];
 }
 
 // api check health endpoint

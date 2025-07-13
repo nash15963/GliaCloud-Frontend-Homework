@@ -41,6 +41,7 @@ interface Props {
   onTimestampHandled?: () => void;
   onTimeUpdate?: (time: number) => void;
   videoDataMutation?: UseMutationResult<ApiResponse, Error, string | undefined, unknown>;
+  selectedHighlights?: string[];
   state: {
     videoProcessMutation: UseMutationResult<ApiEndpoints["IVideoProcess"]["response"], Error, File, unknown>;
   };
@@ -52,6 +53,7 @@ const VideoPlayerBlock = ({
   onTimestampHandled,
   onTimeUpdate,
   videoDataMutation,
+  selectedHighlights = [],
   state,
 }: Props) => {
   const [videoSrc, setVideoSrc] = useState<string>("");
@@ -60,6 +62,57 @@ const VideoPlayerBlock = ({
 
   // Transform subtitle data using pure function
   const subtitles = transformToSubtitles(videoDataMutation?.data?.data);
+
+  // Generate clips from selected highlights - merge consecutive sentences into continuous segments
+  const generateClips = () => {
+    if (selectedHighlights.length === 0) {
+      return [];
+    }
+
+    if (!videoDataMutation?.data?.data?.transcript?.sections) {
+      return [];
+    }
+
+    // Get all selected sentences and sort by time
+    const selectedSentences = videoDataMutation.data.data.transcript.sections
+      .flatMap(section => section.sentences)
+      .filter(sentence => selectedHighlights.includes(sentence.id))
+      .sort((a, b) => a.startTime - b.startTime);
+
+    if (selectedSentences.length === 0) return [];
+
+    // Merge consecutive sentences into continuous clips
+    const clips: Array<{startTime: number, endTime: number}> = [];
+    let currentClip = {
+      startTime: selectedSentences[0].startTime,
+      endTime: selectedSentences[0].endTime
+    };
+
+    for (let i = 1; i < selectedSentences.length; i++) {
+      const sentence = selectedSentences[i];
+      const previousSentence = selectedSentences[i - 1];
+      
+      // If current sentence starts immediately after the previous one ends (or with small gap < 1 second),
+      // extend the current clip
+      if (sentence.startTime - previousSentence.endTime <= 1) {
+        currentClip.endTime = sentence.endTime;
+      } else {
+        // Gap is too large, start a new clip
+        clips.push(currentClip);
+        currentClip = {
+          startTime: sentence.startTime,
+          endTime: sentence.endTime
+        };
+      }
+    }
+
+    // Don't forget to add the last clip
+    clips.push(currentClip);
+
+    return clips;
+  };
+
+  const highlightClips = generateClips();
 
   /**
    * Handle file selection from input element
@@ -113,6 +166,7 @@ const VideoPlayerBlock = ({
               onTimestampHandled={onTimestampHandled}
               onTimeUpdate={onTimeUpdate}
               subtitles={subtitles}
+              highlightClips={highlightClips}
             />
           </div>
         ) : videoSrc && state.videoProcessMutation.isPending ? (

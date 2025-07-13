@@ -9,28 +9,34 @@ interface Subtitle {
   text: string;
 }
 
+interface Clip {
+  startTime: number;
+  endTime: number;
+}
+
 interface CustomVideoPlayerProps {
   src: string;
   currentTimestamp?: number | null;
   onTimestampHandled?: () => void;
   onTimeUpdate?: (time: number) => void;
   subtitles?: Subtitle[];
+  highlightClips?: Clip[];
 }
 
-const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUpdate, subtitles = [] }: CustomVideoPlayerProps) => {
+const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUpdate, subtitles = [], highlightClips = [] }: CustomVideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [bufferedRanges, setBufferedRanges] = useState<Array<{start: number, end: number}>>([]);
   const [currentSubtitle, setCurrentSubtitle] = useState<string>("");
   const [showSubtitles, setShowSubtitles] = useState<boolean>(true);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragTime, setDragTime] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentClipIndex, setCurrentClipIndex] = useState(0);
+  const [isPlayingClips, setIsPlayingClips] = useState(false);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverPosition, setHoverPosition] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   const initializeHls = useCallback(() => {
     const video = videoRef.current;
@@ -74,30 +80,104 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
     }
   }, [src]);
 
+  // Play only highlight clips or full video if no clips selected
+  const playHighlightClips = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (highlightClips.length === 0) {
+      // No clips selected, play full video
+      setIsPlayingClips(false);
+      video.currentTime = 0;
+      video.play();
+      setIsPlaying(true);
+      return;
+    }
+
+    // Play clips in sequence
+    setIsPlayingClips(true);
+    setCurrentClipIndex(0);
+    video.currentTime = highlightClips[0].startTime;
+    video.play();
+    setIsPlaying(true);
+  }, [highlightClips]);
+
   const togglePlayPause = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
 
     if (video.paused) {
-      video.play();
-      setIsPlaying(true);
+      if (highlightClips.length > 0 && !isPlayingClips) {
+        playHighlightClips();
+      } else {
+        video.play();
+        setIsPlaying(true);
+      }
     } else {
       video.pause();
       setIsPlaying(false);
     }
-  }, []);
+  }, [highlightClips, isPlayingClips, playHighlightClips]);
 
-  const skipForward = useCallback((seconds: number = 10) => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.currentTime = Math.min(video.currentTime + seconds, video.duration);
-  }, []);
+  // Find which clip the current time belongs to
+  const getCurrentClipIndex = useCallback((currentVideoTime: number) => {
+    return highlightClips.findIndex(clip => 
+      currentVideoTime >= clip.startTime && currentVideoTime <= clip.endTime
+    );
+  }, [highlightClips]);
 
-  const skipBackward = useCallback((seconds: number = 10) => {
+  const skipForward = useCallback(() => {
     const video = videoRef.current;
-    if (!video) return;
-    video.currentTime = Math.max(video.currentTime - seconds, 0);
-  }, []);
+    if (!video || highlightClips.length <= 1) return;
+
+    // Jump to next clip
+    const nextClipIndex = currentClipIndex + 1;
+    if (nextClipIndex < highlightClips.length) {
+      setCurrentClipIndex(nextClipIndex);
+      video.currentTime = highlightClips[nextClipIndex].startTime;
+      if (!isPlaying) {
+        setIsPlayingClips(true);
+        video.play();
+        setIsPlaying(true);
+      }
+    } else {
+      // At last clip, jump to first clip
+      setCurrentClipIndex(0);
+      video.currentTime = highlightClips[0].startTime;
+      if (!isPlaying) {
+        setIsPlayingClips(true);
+        video.play();
+        setIsPlaying(true);
+      }
+    }
+  }, [highlightClips, currentClipIndex, isPlaying]);
+
+  const skipBackward = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || highlightClips.length <= 1) return;
+
+    // Jump to previous clip
+    const prevClipIndex = currentClipIndex - 1;
+    if (prevClipIndex >= 0) {
+      setCurrentClipIndex(prevClipIndex);
+      video.currentTime = highlightClips[prevClipIndex].startTime;
+      if (!isPlaying) {
+        setIsPlayingClips(true);
+        video.play();
+        setIsPlaying(true);
+      }
+    } else {
+      // At first clip, jump to last clip
+      const lastClipIndex = highlightClips.length - 1;
+      setCurrentClipIndex(lastClipIndex);
+      video.currentTime = highlightClips[lastClipIndex].startTime;
+      if (!isPlaying) {
+        setIsPlayingClips(true);
+        video.play();
+        setIsPlaying(true);
+      }
+    }
+  }, [highlightClips, currentClipIndex, isPlaying]);
 
   const seekTo = useCallback((time: number) => {
     const video = videoRef.current;
@@ -109,53 +189,18 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
     setShowSubtitles(prev => !prev);
   }, []);
 
-  // Handle progress bar dragging
-  const handleProgressMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-    
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
-    const newTime = percentage * duration;
-    setDragTime(newTime);
-  }, [duration]);
+  const formatTime = (timeInSeconds: number): string => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = Math.floor(timeInSeconds % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
-  const handleProgressMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
-    
-    const progressBar = document.querySelector('.progress-bar-container') as HTMLElement;
-    if (!progressBar) return;
-    
-    const rect = progressBar.getBoundingClientRect();
-    const moveX = e.clientX - rect.left;
-    const percentage = Math.max(0, Math.min(1, moveX / rect.width));
-    const newTime = percentage * duration;
-    setDragTime(newTime);
-  }, [isDragging, duration]);
-
-  const handleProgressMouseUp = useCallback(() => {
-    if (isDragging) {
-      seekTo(dragTime);
-      setIsDragging(false);
+  // Handle hover for time preview on progress bar
+  const handleProgressMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (duration <= 0) {
+      return; // Don't show hover if no duration
     }
-  }, [isDragging, dragTime, seekTo]);
-
-  // Add global mouse event listeners for dragging
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleProgressMouseMove);
-      document.addEventListener('mouseup', handleProgressMouseUp);
-      
-      return () => {
-        document.removeEventListener('mousemove', handleProgressMouseMove);
-        document.removeEventListener('mouseup', handleProgressMouseUp);
-      };
-    }
-  }, [isDragging]);
-
-  // Handle hover for time preview
-  const handleProgressMouseEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    
     const rect = e.currentTarget.getBoundingClientRect();
     const hoverX = e.clientX - rect.left;
     const percentage = Math.max(0, Math.min(1, hoverX / rect.width));
@@ -168,36 +213,106 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
     setHoverTime(null);
   }, []);
 
-  const handleProgressMouseHover = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging) return;
+  // Check if a time position is within any selected clip
+  const isTimeInClips = useCallback((time: number) => {
+    return highlightClips.some(clip => 
+      time >= clip.startTime && time <= clip.endTime
+    );
+  }, [highlightClips]);
+
+  // Find which clip contains the given time
+  const findClipForTime = useCallback((time: number) => {
+    return highlightClips.find(clip => 
+      time >= clip.startTime && time <= clip.endTime
+    );
+  }, [highlightClips]);
+
+  // Handle progress bar click for seeking
+  const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (duration <= 0) return;
     
     const rect = e.currentTarget.getBoundingClientRect();
-    const hoverX = e.clientX - rect.left;
-    const percentage = Math.max(0, Math.min(1, hoverX / rect.width));
-    const time = percentage * duration;
-    setHoverTime(time);
-    setHoverPosition(hoverX);
-  }, [duration, isDragging]);
-
-  const formatTime = (timeInSeconds: number): string => {
-    const minutes = Math.floor(timeInSeconds / 60);
-    const seconds = Math.floor(timeInSeconds % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const updateBufferedRanges = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || !video.buffered) return;
-
-    const ranges: Array<{start: number, end: number}> = [];
-    for (let i = 0; i < video.buffered.length; i++) {
-      ranges.push({
-        start: video.buffered.start(i),
-        end: video.buffered.end(i)
-      });
+    const clickX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+    const seekTime = percentage * duration;
+    
+    // Only allow seeking if the time is within a selected clip
+    if (isTimeInClips(seekTime)) {
+      const video = videoRef.current;
+      if (video) {
+        video.currentTime = seekTime;
+        
+        // Update clip index if we're playing clips
+        if (isPlayingClips) {
+          const newClipIndex = getCurrentClipIndex(seekTime);
+          if (newClipIndex >= 0) {
+            setCurrentClipIndex(newClipIndex);
+          }
+        }
+      }
     }
-    setBufferedRanges(ranges);
+  }, [duration, isTimeInClips, getCurrentClipIndex, isPlayingClips]);
+
+  // Handle mouse down for dragging
+  const handleProgressMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (duration <= 0) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+    const seekTime = percentage * duration;
+    
+    // Only start dragging if the click is within a selected clip
+    if (isTimeInClips(seekTime)) {
+      setIsDragging(true);
+      handleProgressClick(e);
+    }
+  }, [duration, isTimeInClips, handleProgressClick]);
+
+  // Handle mouse move during drag
+  const handleProgressMouseMoveWhileDragging = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || duration <= 0) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const moveX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, moveX / rect.width));
+    const seekTime = percentage * duration;
+    
+    // Only allow dragging within selected clips
+    if (isTimeInClips(seekTime)) {
+      const video = videoRef.current;
+      if (video) {
+        video.currentTime = seekTime;
+        
+        // Update clip index if we're playing clips
+        if (isPlayingClips) {
+          const newClipIndex = getCurrentClipIndex(seekTime);
+          if (newClipIndex >= 0) {
+            setCurrentClipIndex(newClipIndex);
+          }
+        }
+      }
+    }
+  }, [isDragging, duration, isTimeInClips, getCurrentClipIndex, isPlayingClips]);
+
+  // Handle mouse up to stop dragging
+  const handleProgressMouseUp = useCallback(() => {
+    setIsDragging(false);
   }, []);
+
+  // Enhanced mouse move handler that combines hover and drag functionality
+  const handleProgressMouseMoveEnhanced = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Always update hover time for preview
+    handleProgressMouseMove(e);
+    
+    // Handle dragging if active
+    if (isDragging) {
+      handleProgressMouseMoveWhileDragging(e);
+    }
+  }, [handleProgressMouseMove, isDragging, handleProgressMouseMoveWhileDragging]);
+
+
+
 
   // Find current subtitle based on current time
   const updateCurrentSubtitle = useCallback((time: number) => {
@@ -226,9 +341,29 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
     if (!video) return;
 
     const handleTimeUpdate = () => {
-      setCurrentTime(video.currentTime);
-      onTimeUpdate?.(video.currentTime);
-      updateCurrentSubtitle(video.currentTime);
+      const currentVideoTime = video.currentTime;
+      setCurrentTime(currentVideoTime);
+      onTimeUpdate?.(currentVideoTime);
+      updateCurrentSubtitle(currentVideoTime);
+
+      // Check if we're playing clips and need to jump to next clip
+      if (isPlayingClips && highlightClips.length > 0) {
+        const currentClip = highlightClips[currentClipIndex];
+        if (currentClip && currentVideoTime >= currentClip.endTime) {
+          // Current clip ended, move to next clip
+          const nextClipIndex = currentClipIndex + 1;
+          if (nextClipIndex < highlightClips.length) {
+            setCurrentClipIndex(nextClipIndex);
+            video.currentTime = highlightClips[nextClipIndex].startTime;
+          } else {
+            // All clips finished, stop playing
+            video.pause();
+            setIsPlaying(false);
+            setIsPlayingClips(false);
+            setCurrentClipIndex(0);
+          }
+        }
+      }
     };
 
     const handleDurationChange = () => {
@@ -251,9 +386,6 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
       setIsLoading(false);
     };
 
-    const handleProgress = () => {
-      updateBufferedRanges();
-    };
 
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('durationchange', handleDurationChange);
@@ -261,7 +393,6 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
     video.addEventListener('pause', handlePause);
     video.addEventListener('loadstart', handleLoadStart);
     video.addEventListener('canplay', handleCanPlay);
-    video.addEventListener('progress', handleProgress);
 
     return () => {
       video.removeEventListener('timeupdate', handleTimeUpdate);
@@ -270,9 +401,22 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('canplay', handleCanPlay);
-      video.removeEventListener('progress', handleProgress);
-    };
-  }, [updateBufferedRanges, updateCurrentSubtitle]);
+      };
+  }, [updateCurrentSubtitle, isPlayingClips, highlightClips, currentClipIndex]);
+
+  // Add global mouse event listeners for drag functionality
+  useEffect(() => {
+    if (isDragging) {
+      const handleGlobalMouseUp = () => {
+        setIsDragging(false);
+      };
+
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      return () => {
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
+      };
+    }
+  }, [isDragging]);
 
   useEffect(() => {
     if (currentTimestamp !== null && currentTimestamp !== undefined) {
@@ -315,57 +459,47 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
       </div>
 
       <div className="flex flex-col gap-3 p-4 bg-gray-50 rounded-lg">
+        {/* Custom Clip Progress Bar */}
         <div className="flex items-center gap-3">
-          <span className={`text-sm font-mono min-w-max transition-colors duration-200 ${
-            isDragging ? 'text-blue-600 font-semibold' : 'text-gray-500'
-          }`}>
-            {formatTime(isDragging ? dragTime : currentTime)}
+          <span className="text-sm text-gray-500 font-mono min-w-max">
+            {formatTime(currentTime)}
           </span>
           <div className="flex-1 relative">
-            {/* Custom progress bar container */}
             <div 
-              className="progress-bar-container relative w-full h-2 bg-gray-200 rounded-lg cursor-pointer hover:h-3 transition-all duration-200 group select-none"
-              onMouseDown={handleProgressMouseDown}
-              onMouseEnter={handleProgressMouseEnter}
+              className="relative w-full h-3 bg-gray-200 rounded-lg overflow-hidden cursor-pointer select-none"
+              onMouseMove={handleProgressMouseMoveEnhanced}
               onMouseLeave={handleProgressMouseLeave}
-              onMouseMove={handleProgressMouseHover}
+              onMouseDown={handleProgressMouseDown}
+              onMouseUp={handleProgressMouseUp}
+              onClick={handleProgressClick}
             >
-              {/* Buffered ranges - gray background */}
-              {bufferedRanges.map((range, index) => (
+              {/* Video duration background */}
+              <div className="absolute inset-0 bg-gray-300"></div>
+              
+              {/* Highlight clips */}
+              {highlightClips.map((clip, index) => (
                 <div
                   key={index}
-                  className="absolute h-full bg-gray-400 rounded-lg transition-all duration-200"
+                  className="absolute h-full bg-blue-500"
                   style={{
-                    left: `${duration > 0 ? (range.start / duration) * 100 : 0}%`,
-                    width: `${duration > 0 ? ((range.end - range.start) / duration) * 100 : 0}%`
+                    left: `${duration > 0 ? (clip.startTime / duration) * 100 : 0}%`,
+                    width: `${duration > 0 ? ((clip.endTime - clip.startTime) / duration) * 100 : 0}%`
                   }}
                 />
               ))}
               
-              {/* Current progress - blue with hover effect */}
+              {/* Current progress indicator */}
               <div
-                className={`absolute h-full bg-blue-500 rounded-lg transition-all group-hover:bg-blue-600 ${
-                  isDragging ? 'duration-0' : 'duration-100'
-                }`}
+                className="absolute top-0 w-1 h-full bg-red-500 z-10"
                 style={{
-                  width: `${duration > 0 ? ((isDragging ? dragTime : currentTime) / duration) * 100 : 0}%`
+                  left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`
                 }}
               />
-              
-              {/* Progress indicator dot - appears on hover or drag */}
-              <div
-                className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-600 rounded-full shadow-lg transition-opacity duration-200 ${
-                  isDragging ? 'opacity-100 scale-125' : 'opacity-0 group-hover:opacity-100'
-                }`}
-                style={{
-                  left: `calc(${duration > 0 ? ((isDragging ? dragTime : currentTime) / duration) * 100 : 0}% - 8px)`
-                }}
-              />
-              
+
               {/* Time preview tooltip */}
-              {hoverTime !== null && !isDragging && (
+              {hoverTime !== null && duration > 0 && (
                 <div 
-                  className="absolute bottom-full mb-2 px-2 py-1 bg-black bg-opacity-80 text-white text-xs rounded whitespace-nowrap pointer-events-none z-10"
+                  className="absolute bottom-full mb-2 px-2 py-1 bg-black bg-opacity-80 text-white text-xs rounded whitespace-nowrap pointer-events-none z-20"
                   style={{
                     left: `${hoverPosition}px`,
                     transform: 'translateX(-50%)'
@@ -374,16 +508,6 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
                   {formatTime(hoverTime)}
                 </div>
               )}
-
-              {/* Invisible range input for accessibility */}
-              <input
-                type="range"
-                min={0}
-                max={duration || 0}
-                value={isDragging ? dragTime : currentTime}
-                onChange={(e) => !isDragging && seekTo(Number(e.target.value))}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
             </div>
           </div>
           <span className="text-sm text-gray-500 font-mono min-w-max">
@@ -393,9 +517,9 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
 
         <div className="flex justify-center gap-3">
           <button
-            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => skipBackward()}
-            disabled={isLoading}
+            disabled={isLoading || highlightClips.length <= 1}
           >
             <TrackPreviousIcon className="w-4 h-4" />
           </button>
@@ -409,9 +533,9 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
           </button>
 
           <button
-            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => skipForward()}
-            disabled={isLoading}
+            disabled={isLoading || highlightClips.length <= 1}
           >
             <TrackNextIcon className="w-4 h-4" />
           </button>

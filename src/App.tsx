@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 function App() {
   const [currentTimestamp, setCurrentTimestamp] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
+  const [selectedHighlights, setSelectedHighlights] = useState<string[]>([]);
 
   const videoProcessMutation = useMutation({
     mutationFn: async (file: File) => await videoApi.processVideo(file),
@@ -47,6 +48,8 @@ function App() {
         videoDataMutation={videoDataMutaion} 
         onTimestampClick={setCurrentTimestamp}
         currentTime={currentTime}
+        selectedHighlights={selectedHighlights}
+        onHighlightToggle={setSelectedHighlights}
       />
 
       {/* Right side - Preview */}
@@ -56,6 +59,7 @@ function App() {
         onTimestampHandled={() => setCurrentTimestamp(null)}
         onTimeUpdate={setCurrentTime}
         videoDataMutation={videoDataMutaion}
+        selectedHighlights={selectedHighlights}
         state={{
           videoProcessMutation,
         }}
@@ -65,3 +69,6 @@ function App() {
 }
 
 export default App;
+
+
+
