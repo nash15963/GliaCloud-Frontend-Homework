@@ -18,6 +18,7 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [bufferedRanges, setBufferedRanges] = useState<Array<{start: number, end: number}>>([]);
 
   const initializeHls = useCallback(() => {
     const video = videoRef.current;
@@ -98,6 +99,20 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const updateBufferedRanges = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !video.buffered) return;
+
+    const ranges: Array<{start: number, end: number}> = [];
+    for (let i = 0; i < video.buffered.length; i++) {
+      ranges.push({
+        start: video.buffered.start(i),
+        end: video.buffered.end(i)
+      });
+    }
+    setBufferedRanges(ranges);
+  }, []);
+
   useEffect(() => {
     if (src) {
       setIsLoading(true);
@@ -141,12 +156,17 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
       setIsLoading(false);
     };
 
+    const handleProgress = () => {
+      updateBufferedRanges();
+    };
+
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('durationchange', handleDurationChange);
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
     video.addEventListener('loadstart', handleLoadStart);
     video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('progress', handleProgress);
 
     return () => {
       video.removeEventListener('timeupdate', handleTimeUpdate);
@@ -155,8 +175,9 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('progress', handleProgress);
     };
-  }, []);
+  }, [updateBufferedRanges]);
 
   useEffect(() => {
     if (currentTimestamp !== null && currentTimestamp !== undefined) {
@@ -197,17 +218,54 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
             {formatTime(currentTime)}
           </span>
           <div className="flex-1 relative">
-            <input
-              type="range"
-              min={0}
-              max={duration || 0}
-              value={currentTime}
-              onChange={(e) => seekTo(Number(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-              style={{
-                background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(currentTime / duration) * 100}%, #e5e7eb ${(currentTime / duration) * 100}%, #e5e7eb 100%)`
+            {/* Custom progress bar container */}
+            <div 
+              className="relative w-full h-2 bg-gray-200 rounded-lg cursor-pointer hover:h-3 transition-all duration-200 group"
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const percentage = clickX / rect.width;
+                seekTo(percentage * duration);
               }}
-            />
+            >
+              {/* Buffered ranges - gray background */}
+              {bufferedRanges.map((range, index) => (
+                <div
+                  key={index}
+                  className="absolute h-full bg-gray-400 rounded-lg transition-all duration-200"
+                  style={{
+                    left: `${duration > 0 ? (range.start / duration) * 100 : 0}%`,
+                    width: `${duration > 0 ? ((range.end - range.start) / duration) * 100 : 0}%`
+                  }}
+                />
+              ))}
+              
+              {/* Current progress - blue with hover effect */}
+              <div
+                className="absolute h-full bg-blue-500 rounded-lg transition-all duration-100 group-hover:bg-blue-600"
+                style={{
+                  width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`
+                }}
+              />
+              
+              {/* Progress indicator dot - appears on hover */}
+              <div
+                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
+                style={{
+                  left: `calc(${duration > 0 ? (currentTime / duration) * 100 : 0}% - 6px)`
+                }}
+              />
+              
+              {/* Invisible range input for accessibility */}
+              <input
+                type="range"
+                min={0}
+                max={duration || 0}
+                value={currentTime}
+                onChange={(e) => seekTo(Number(e.target.value))}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+            </div>
           </div>
           <span className="text-sm text-gray-500 font-mono min-w-max">
             {formatTime(duration)}
