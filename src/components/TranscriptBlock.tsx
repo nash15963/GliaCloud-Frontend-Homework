@@ -63,21 +63,21 @@ const TranscriptBlock = ({ videoDataMutation, onTimestampClick, currentTime = 0 
       )}
       
       {transformedData.map((section, sectionIndex) => (
-        <div key={sectionIndex} className="mb-6">
-          <h4 className="text-md font-semibold text-gray-700 mb-3 border-b border-gray-200 pb-2">
+        <div key={sectionIndex} className="mb-8 last:mb-0">
+          <h4 className="text-md font-semibold text-gray-700 mb-4 border-b border-gray-200 pb-3">
             {section.title}
           </h4>
           
-          <div className="space-y-2">
+          <div className="space-y-3">
             {section.script.map((scriptItem, scriptIndex) => {
               const isHighlighted = isCurrentlyPlaying(scriptItem.startTime);
               return (
                 <div
                   key={scriptIndex}
-                  className={`p-3 border-l-4 rounded-r-md hover:bg-gray-100 transition-colors cursor-pointer ${
+                  className={`p-4 border-l-4 rounded-r-md hover:bg-gray-100 transition-all duration-200 cursor-pointer shadow-sm ${
                     isHighlighted 
-                      ? 'bg-blue-100 border-blue-600 shadow-md' 
-                      : 'bg-white border-blue-400'
+                      ? 'bg-blue-100 border-blue-600 shadow-md transform scale-[1.02]' 
+                      : 'bg-white border-blue-400 hover:shadow-md'
                   }`}
                   onClick={() => onTimestampClick?.(scriptItem.startTime)}
                 >

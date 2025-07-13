@@ -11,15 +11,13 @@ interface Subtitle {
 
 interface CustomVideoPlayerProps {
   src: string;
-  width?: string | number;
-  height?: string | number;
   currentTimestamp?: number | null;
   onTimestampHandled?: () => void;
   onTimeUpdate?: (time: number) => void;
   subtitles?: Subtitle[];
 }
 
-const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimestamp, onTimestampHandled, onTimeUpdate, subtitles = [] }: CustomVideoPlayerProps) => {
+const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUpdate, subtitles = [] }: CustomVideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -216,13 +214,11 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
 
   return (
     <div className="video-player-wrapper flex flex-col gap-3">
-      {/* Video playback area with subtitle overlay */}
-      <div className="rounded-xl overflow-hidden shadow-md w-full bg-black relative">
+      {/* Video playback area with subtitle overlay - Fixed aspect ratio */}
+      <div className="rounded-xl overflow-hidden shadow-md w-full bg-black relative aspect-video">
         <video
           ref={videoRef}
-          width={width}
-          height={height}
-          className="w-full h-auto"
+          className="w-full h-full object-contain"
           preload="metadata"
           // Remove controls attribute to hide native controls
         />
