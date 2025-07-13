@@ -1,5 +1,6 @@
 import type { ApiEndpoints } from '@/types/api';
 import type { UseMutationResult } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 
 type ApiResponse = NonNullable<ApiEndpoints["IVideoData"]["response"]>;
 type TRawVideoData = ApiResponse["data"];
@@ -38,14 +39,47 @@ const transformVideoData = (videoData?: TRawVideoData): TransformSection[] => {
 
 const TranscriptBlock = ({ videoDataMutation, onTimestampClick, currentTime = 0 }: Props) => {
   const transformedData = transformVideoData(videoDataMutation?.data?.data);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const activeItemRef = useRef<HTMLDivElement>(null);
 
   // Check if a script item is currently playing (within 1 second window)
   const isCurrentlyPlaying = (startTime: number) => {
     return Math.abs(currentTime - startTime) < 1;
   };
 
+  // Auto-scroll to follow highlighted item
+  useEffect(() => {
+    if (activeItemRef.current && containerRef.current) {
+      const container = containerRef.current;
+      const activeItem = activeItemRef.current;
+      
+      const containerRect = container.getBoundingClientRect();
+      const activeItemRect = activeItem.getBoundingClientRect();
+      
+      // Check if the active item is outside the visible area
+      const isAboveView = activeItemRect.top < containerRect.top;
+      const isBelowView = activeItemRect.bottom > containerRect.bottom;
+      
+      if (isAboveView || isBelowView) {
+        // Calculate the scroll position to center the active item
+        const activeItemOffsetTop = activeItem.offsetTop;
+        const containerHeight = container.clientHeight;
+        const activeItemHeight = activeItem.clientHeight;
+        
+        // Center the active item in the container
+        const targetScrollTop = activeItemOffsetTop - (containerHeight / 2) + (activeItemHeight / 2);
+        
+        container.scrollTo({
+          top: targetScrollTop,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [currentTime]); // Trigger when currentTime changes
+
   return (
     <div
+      ref={containerRef}
       style={{ width: "49%", height: "90vh" }}
       className="border border-gray-300 rounded-lg bg-white shadow-sm box-border p-4 overflow-y-auto">
       <h3 className="text-lg font-semibold text-gray-800 mb-4">Transcript Highlights</h3>
@@ -74,6 +108,7 @@ const TranscriptBlock = ({ videoDataMutation, onTimestampClick, currentTime = 0 
               return (
                 <div
                   key={scriptIndex}
+                  ref={isHighlighted ? activeItemRef : null}
                   className={`p-4 border-l-4 rounded-r-md hover:bg-gray-100 transition-all duration-200 cursor-pointer shadow-sm ${
                     isHighlighted 
                       ? 'bg-blue-100 border-blue-600 shadow-md transform scale-[1.02]' 
