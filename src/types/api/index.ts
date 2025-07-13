@@ -28,7 +28,7 @@ interface ITranscript {
 interface IVideoData {
   videoId: string;
   fileName: string;
-  url: string;
+  url?: string;
   duration: number;
   transcript: ITranscript;
 }

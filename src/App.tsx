@@ -51,7 +51,6 @@ function App() {
 
       {/* Right side - Preview */}
       <VideoPlayerBlock
-        src={videoDataMutaion.data?.data?.url || ""}
         handleVideoProcess={videoProcessMutation.mutate}
         currentTimestamp={currentTimestamp}
         onTimestampHandled={() => setCurrentTimestamp(null)}

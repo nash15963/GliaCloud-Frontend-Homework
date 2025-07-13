@@ -1,7 +1,7 @@
 import type { ApiEndpoints } from '@/types/api'
 
 export const aiGenMockData: NonNullable<ApiEndpoints["IVideoData"]["response"]["data"]> = {
-    url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    url: import.meta.env.VITE_USE_MOCKS_VIDEO_DATA,
     videoId: "x36xhzz",
     fileName: "Big_Buck_Bunny_720_10s.mp4",
     duration: 634.57,

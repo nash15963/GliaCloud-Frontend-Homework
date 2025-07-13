@@ -36,7 +36,6 @@ const transformToSubtitles = (videoData?: TRawVideoData): Subtitle[] => {
 };
 
 interface Props {
-  src: string;
   handleVideoProcess: (file: File) => void;
   currentTimestamp?: number | null;
   onTimestampHandled?: () => void;
@@ -48,7 +47,6 @@ interface Props {
 }
 
 const VideoPlayerBlock = ({
-  src,
   handleVideoProcess,
   currentTimestamp,
   onTimestampHandled,
@@ -89,9 +87,7 @@ const VideoPlayerBlock = ({
   return (
     <div className="w-full min-h-[500px] border border-gray-300 rounded-lg bg-white shadow-sm p-4 flex flex-col">
       <h3 className="text-lg font-semibold text-gray-800 mb-4">
-        Video Player{selectedFileName && (
-          <span className="text-gray-600 font-normal"> - {selectedFileName}</span>
-        )}
+        Video Player{selectedFileName && <span className="text-gray-600 font-normal"> - {selectedFileName}</span>}
       </h3>
 
       <input ref={fileInputRef} type="file" accept="video/*" onChange={handleFileSelect} className="hidden" />
@@ -99,7 +95,7 @@ const VideoPlayerBlock = ({
       {/* Video content area */}
       <div className="flex-1 flex items-center justify-center min-h-[400px]">
         {/* Show VideoPlayer only when we have successfully processed data and video URL */}
-        {videoSrc && src && videoDataMutation?.isSuccess && videoDataMutation?.data?.data?.url ? (
+        {videoSrc && videoDataMutation?.isSuccess ? (
           <div className="w-full">
             {/* Change video button when video is loaded */}
             <div className="mb-4 flex justify-end">
@@ -112,7 +108,7 @@ const VideoPlayerBlock = ({
             </div>
 
             <VideoPlayer
-              src={src}
+              src={videoDataMutation?.data?.data?.url || videoSrc}
               currentTimestamp={currentTimestamp}
               onTimestampHandled={onTimestampHandled}
               onTimeUpdate={onTimeUpdate}
