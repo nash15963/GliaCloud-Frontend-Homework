@@ -45,7 +45,9 @@ function App() {
       }}>
       {/* Left side - Transcript */}
       <TranscriptBlock 
-        videoDataMutation={videoDataMutaion} 
+        isLoading={videoDataMutaion.isPending || checkVideoStatus.isLoading || videoProcessMutation.isPending}
+        isError={videoDataMutaion.isError || checkVideoStatus.isError}
+        data={videoDataMutaion.data?.data}
         onTimestampClick={setCurrentTimestamp}
         currentTime={currentTime}
         selectedHighlights={selectedHighlights}
