@@ -60,6 +60,7 @@ function App() {
         currentTimestamp={currentTimestamp}
         onTimestampHandled={() => setCurrentTimestamp(null)}
         onTimeUpdate={setCurrentTime}
+        videoDataMutation={videoDataMutaion}
         state={{
           videoProcessMutation,
         }}

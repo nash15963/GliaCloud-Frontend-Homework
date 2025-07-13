@@ -1,6 +1,13 @@
 import { useRef, useCallback, useState, useEffect } from "react";
-import { PlayIcon, PauseIcon, TrackPreviousIcon, TrackNextIcon } from "@radix-ui/react-icons";
+import { PlayIcon, PauseIcon, TrackPreviousIcon, TrackNextIcon, TextIcon } from "@radix-ui/react-icons";
 import Hls from "hls.js";
+
+// Subtitle interface
+interface Subtitle {
+  startTime: number;
+  endTime: number;
+  text: string;
+}
 
 interface CustomVideoPlayerProps {
   src: string;
@@ -9,9 +16,10 @@ interface CustomVideoPlayerProps {
   currentTimestamp?: number | null;
   onTimestampHandled?: () => void;
   onTimeUpdate?: (time: number) => void;
+  subtitles?: Subtitle[];
 }
 
-const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimestamp, onTimestampHandled, onTimeUpdate }: CustomVideoPlayerProps) => {
+const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimestamp, onTimestampHandled, onTimeUpdate, subtitles = [] }: CustomVideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -19,6 +27,8 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [bufferedRanges, setBufferedRanges] = useState<Array<{start: number, end: number}>>([]);
+  const [currentSubtitle, setCurrentSubtitle] = useState<string>("");
+  const [showSubtitles, setShowSubtitles] = useState<boolean>(true);
 
   const initializeHls = useCallback(() => {
     const video = videoRef.current;
@@ -93,6 +103,10 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
     video.currentTime = time;
   }, []);
 
+  const toggleSubtitles = useCallback(() => {
+    setShowSubtitles(prev => !prev);
+  }, []);
+
   const formatTime = (timeInSeconds: number): string => {
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = Math.floor(timeInSeconds % 60);
@@ -112,6 +126,14 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
     }
     setBufferedRanges(ranges);
   }, []);
+
+  // Find current subtitle based on current time
+  const updateCurrentSubtitle = useCallback((time: number) => {
+    const activeSubtitle = subtitles.find(subtitle => 
+      time >= subtitle.startTime && time <= subtitle.endTime
+    );
+    setCurrentSubtitle(activeSubtitle?.text || "");
+  }, [subtitles]);
 
   useEffect(() => {
     if (src) {
@@ -134,6 +156,7 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
       onTimeUpdate?.(video.currentTime);
+      updateCurrentSubtitle(video.currentTime);
     };
 
     const handleDurationChange = () => {
@@ -177,7 +200,7 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
       video.removeEventListener('canplay', handleCanPlay);
       video.removeEventListener('progress', handleProgress);
     };
-  }, [updateBufferedRanges]);
+  }, [updateBufferedRanges, updateCurrentSubtitle]);
 
   useEffect(() => {
     if (currentTimestamp !== null && currentTimestamp !== undefined) {
@@ -193,7 +216,7 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
 
   return (
     <div className="video-player-wrapper flex flex-col gap-3">
-      {/* Video playback area - no native controls */}
+      {/* Video playback area with subtitle overlay */}
       <div className="rounded-xl overflow-hidden shadow-md w-full bg-black relative">
         <video
           ref={videoRef}
@@ -208,6 +231,15 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
             <div className="text-white text-sm">Loading...</div>
+          </div>
+        )}
+
+        {/* Subtitle overlay - Positioned at bottom of video */}
+        {currentSubtitle && showSubtitles && (
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-black bg-opacity-75 rounded max-w-[90%]">
+            <span className="text-white text-center text-sm md:text-base leading-relaxed block">
+              {currentSubtitle}
+            </span>
           </div>
         )}
       </div>
@@ -295,6 +327,19 @@ const CustomVideoPlayer = ({ src, width = "100%", height = "100%", currentTimest
             disabled={isLoading}
           >
             <TrackNextIcon className="w-4 h-4" />
+          </button>
+
+          <button
+            className={`flex items-center gap-2 text-white px-4 py-2 rounded transition-colors disabled:opacity-50 ${
+              showSubtitles 
+                ? 'bg-yellow-500 hover:bg-yellow-600' 
+                : 'bg-gray-500 hover:bg-gray-600'
+            }`}
+            onClick={toggleSubtitles}
+            disabled={isLoading}
+            title={showSubtitles ? "Hide Subtitles" : "Show Subtitles"}
+          >
+            <TextIcon className="w-4 h-4" />
           </button>
         </div>
       </div>

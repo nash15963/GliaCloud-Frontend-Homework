@@ -3,21 +3,57 @@ import React, { useState, useRef } from 'react'
 import VideoPlayer from './VideoPlayer'
 import type { ApiEndpoints } from '@/types/api'
 
+type ApiResponse = NonNullable<ApiEndpoints["IVideoData"]["response"]>;
+type TRawVideoData = ApiResponse["data"];
+
+// Subtitle interface
+interface Subtitle {
+  startTime: number;
+  endTime: number;
+  text: string;
+}
+
+// Pure function to transform video data to subtitle array
+const transformToSubtitles = (videoData?: TRawVideoData): Subtitle[] => {
+  if (!videoData?.transcript?.sections) {
+    return [];
+  }
+
+  const subtitles: Subtitle[] = [];
+  
+  videoData.transcript.sections.forEach(section => {
+    section.sentences.forEach(sentence => {
+      subtitles.push({
+        startTime: sentence.startTime,
+        endTime: sentence.endTime,
+        text: sentence.text
+      });
+    });
+  });
+
+  // Sort by start time to ensure proper order
+  return subtitles.sort((a, b) => a.startTime - b.startTime);
+};
+
 interface Props {
   src: string;
   handleVideoProcess: (file: File) => void;
   currentTimestamp?: number | null;
   onTimestampHandled?: () => void;
   onTimeUpdate?: (time: number) => void;
+  videoDataMutation?: UseMutationResult<ApiResponse, Error, string | undefined, unknown>;
   state : {
     videoProcessMutation: UseMutationResult<ApiEndpoints["IVideoProcess"]["response"], Error, File, unknown>;
   }
 }
 
-const VideoPlayerBlock = ({ src, handleVideoProcess, currentTimestamp, onTimestampHandled, onTimeUpdate, state }: Props) => {
+const VideoPlayerBlock = ({ src, handleVideoProcess, currentTimestamp, onTimestampHandled, onTimeUpdate, videoDataMutation, state }: Props) => {
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null)
   const [videoSrc, setVideoSrc] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Transform subtitle data using pure function
+  const subtitles = transformToSubtitles(videoDataMutation?.data?.data);
 
 
   /**
@@ -65,6 +101,7 @@ const VideoPlayerBlock = ({ src, handleVideoProcess, currentTimestamp, onTimesta
           currentTimestamp={currentTimestamp}
           onTimestampHandled={onTimestampHandled}
           onTimeUpdate={onTimeUpdate}
+          subtitles={subtitles}
         />
       )}
     </div>
