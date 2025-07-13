@@ -1,17 +1,25 @@
+import { type UseMutationResult } from '@tanstack/react-query'
 import React, { useState, useRef } from 'react'
+import VideoPlayer from './VideoPlayer'
+import type { ApiEndpoints } from '@/types/api'
 
-/**
- * Video player component with file upload functionality
- * Allows users to upload and preview video files
- */
-const VideoPlayerBlock = () => {
+interface Props {
+  src: string;
+  handleVideoProcess: (file: File) => void;
+  state : {
+    videoProcessMutation: UseMutationResult<ApiEndpoints["IVideoProcess"]["response"], Error, File, unknown>;
+  }
+}
+
+const VideoPlayerBlock = ({ src, handleVideoProcess, state }: Props) => {
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null)
   const [videoSrc, setVideoSrc] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+
   /**
    * Handle file selection from input element
-   * Creates object URL for video preview
+   * Creates object URL for video preview and triggers API processing
    */
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -19,6 +27,9 @@ const VideoPlayerBlock = () => {
       setSelectedVideo(file)
       const url = URL.createObjectURL(file)
       setVideoSrc(url)
+      
+      // Automatically process the video after selection
+      handleVideoProcess(file)
     }
   }
 
@@ -39,20 +50,13 @@ const VideoPlayerBlock = () => {
         <input ref={fileInputRef} type="file" accept="video/*" onChange={handleFileSelect} className="hidden" />
         <button
           onClick={handleUploadClick}
-          className="px-5 py-2.5 bg-blue-600 text-white border-none rounded cursor-pointer hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-          {selectedVideo ? "Change Video" : "Upload Video"}
+          disabled={state.videoProcessMutation.isPending}
+          className="px-5 py-2.5 bg-blue-600 text-white border-none rounded cursor-pointer hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed">
+          {state.videoProcessMutation.isPending ? "Processing..." : selectedVideo ? "Change Video" : "Upload Video"}
         </button>
-        {selectedVideo && <span className="ml-2.5 text-gray-600 text-sm">{selectedVideo.name}</span>}
       </div>
 
-      {videoSrc && (
-        <div className="w-full">
-          <video controls className="w-full max-w-2xl rounded border border-gray-200">
-            <source src={videoSrc} type={selectedVideo?.type} />
-            Your browser does not support the video tag.
-          </video>
-        </div>
-      )}
+      {videoSrc && <VideoPlayer src={src} />}
     </div>
   );
 }
