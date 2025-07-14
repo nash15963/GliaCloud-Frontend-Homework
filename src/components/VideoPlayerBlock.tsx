@@ -1,4 +1,4 @@
-import VideoPlayer from "./VideoPlayer";
+import VideoPlayer from "./VideoPlayer/VideoPlayer";
 import type { ApiEndpoints } from "@/types/api";
 import ProcessingState from "./VideoBlock/ProcessingState";
 import ErrorState from "./VideoBlock/ErrorState";
@@ -87,9 +87,9 @@ const generateHighlightClips = (
 
 interface Props {
   handleVideoProcess: (file: File) => void;
-  currentTimestamp?: number | null;
-  onTimestampHandled?: () => void;
-  onTimeUpdate?: (time: number) => void;
+  currentTimestamp: number | null;
+  onTimestampHandled: () => void;
+  onTimeUpdate: (time: number) => void;
   data: TRawVideoData;
   state: {
     loading: boolean;
