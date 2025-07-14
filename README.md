@@ -179,20 +179,6 @@ src/
 
 * Desktop: Windows & macOS on Chrome
 
-## Available Scripts
-
-```bash
-# Development
-npm run dev              # Start development server with HMR
-npm run build            # Build for production
-npm run preview          # Preview production build
-
-# Code Quality
-npm run lint             # Run ESLint
-npm run type-check       # TypeScript type checking
-npm run type-check:watch # Watch mode for type checking
-```
-
 ## License
 
 This project is a homework assignment and is intended for educational purposes.
