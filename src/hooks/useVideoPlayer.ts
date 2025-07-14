@@ -287,21 +287,18 @@ export const useVideoPlayer = ({
     const video = videoRef.current;
     if (!video) return;
 
-    // Handle pausing - always allow if video is playing
     if (!video.paused) {
       pauseVideo();
       setIsPlaying(false);
       return;
     }
-
-    // Handle playing - only allow if clips are available
     if (!canPlay) return;
-    
-    // Seek to clip if not already playing
     if (!isPlaying) {
-      seekToClip(video, currentClipIndex, highlightClips);
+      const currentClipIndexAtTime = findClipIndex(video.currentTime, highlightClips);
+      if (currentClipIndexAtTime === -1) {
+        seekToClip(video, currentClipIndex, highlightClips);
+      }
     }
-    
     playVideo();
     setIsPlaying(true);
   }, [canPlay, isPlaying, highlightClips, currentClipIndex]);
