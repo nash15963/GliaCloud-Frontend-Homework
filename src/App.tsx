@@ -1,8 +1,9 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
 import "./App.css";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import TranscriptBlock from "./components/TranscriptBlock";
 import VideoPlayerBlock from "./components/VideoPlayerBlock";
 import WelcomeDialog from "./components/dialog/WelcomeDialog";
+import ExportButton from "./components/button/ExportButton";
 import { videoApi } from "./services/video";
 import { useEffect, useState } from "react";
 
@@ -40,9 +41,8 @@ function App() {
 
   return (
     <>
-      {/* Welcome Dialog */}
       <WelcomeDialog />
-      
+      <ExportButton selectedHighlights={selectedHighlights} videoData={videoDataMutaion.data?.data} />
       <div
         style={{
           display: "flex",
@@ -81,6 +81,3 @@ function App() {
 }
 
 export default App;
-
-
-
