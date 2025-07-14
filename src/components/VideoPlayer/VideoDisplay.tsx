@@ -32,7 +32,16 @@ const VideoDisplay = ({
   }, [currentTime, subtitles]);
   return (
     <div className="rounded-xl overflow-hidden shadow-md w-full bg-black relative aspect-video">
-      <video ref={videoRef} className="w-full h-full object-contain" preload="metadata" />
+      <video 
+        ref={videoRef} 
+        className="w-full h-full object-contain" 
+        preload="metadata"
+        playsInline
+        webkit-playsinline="true"
+        controls={false}
+        muted={false}
+        autoPlay
+      />
 
       {/* Loading indicator */}
       {isLoading && (
