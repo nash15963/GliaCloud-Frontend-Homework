@@ -83,8 +83,6 @@ const TranscriptBlock = ({
   const { containerRef, activeItemRef } = useAutoScroll({ triggerReload: currentTime });
   const transformedData = transformVideoData(data);
   
-
-
   // Handle checkbox toggle for highlights
   const handleHighlightToggle = (sentenceId: string) => {
     const newSelectedHighlights = toggleHighlight(selectedHighlights, sentenceId);
