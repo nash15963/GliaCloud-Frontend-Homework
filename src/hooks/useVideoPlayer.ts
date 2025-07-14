@@ -14,14 +14,7 @@ interface UseVideoPlayerProps {
   onTimeUpdate: (time: number) => void;
 }
 
-// Pure function to handle video play/pause logic
-const playVideo = (video: HTMLVideoElement) => {
-  video.play();
-};
 
-const pauseVideo = (video: HTMLVideoElement) => {
-  video.pause();
-};
 
 // Pure function to seek to a specific clip
 const seekToClip = (video: HTMLVideoElement, clipIndex: number, clips: Clip[]) => {
@@ -107,7 +100,6 @@ export const useVideoPlayer = ({
   onTimestampHandled,
   onTimeUpdate
 }: UseVideoPlayerProps): UseVideoPlayerReturn => {
-  
   // State management
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -122,6 +114,15 @@ export const useVideoPlayer = ({
   // Video refs
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
+
+  // Pure function to handle video play/pause logic
+  const playVideo = () => {
+    videoRef.current?.play();
+  };
+
+  const pauseVideo = () => {
+    videoRef.current?.pause();
+  };
 
   // Video initialization logic (no useCallback needed - only called in useEffect)
   const initializeHls = () => {
@@ -205,7 +206,7 @@ export const useVideoPlayer = ({
         
         if (transition.shouldStop) {
           // All clips finished, stop playing
-          pauseVideo(video);
+          pauseVideo();
           setIsPlaying(false);
           setCurrentClipIndex(0);
         } else if (transition.nextClipIndex !== undefined) {
@@ -253,18 +254,16 @@ export const useVideoPlayer = ({
     };
   }, [isPlaying, highlightClips, currentClipIndex]);
 
-  // Handle external timestamp navigation
+  // Handle external timestamp navigation - Fix: Add check to prevent infinite loops
   useEffect(() => {
-    if (currentTimestamp !== null && currentTimestamp !== undefined) {
-      seekTo(currentTimestamp);
+    if (typeof currentTimestamp === "number" && canPlay) {
       const video = videoRef.current;
-      if (video && video.paused && canPlay) {
-        playVideo(video);
-        setIsPlaying(true);
+      if (video) {
+        seekTo(currentTimestamp);
       }
       onTimestampHandled();
     }
-  }, [currentTimestamp, onTimestampHandled, canPlay]);
+  }, [currentTimestamp, canPlay]);
 
   /**
    * Play highlight clips in sequence - only works if clips are selected
@@ -276,7 +275,7 @@ export const useVideoPlayer = ({
     // Start playing from the first clip
     setCurrentClipIndex(0);
     seekToClip(video, 0, highlightClips);
-    playVideo(video);
+    playVideo();
     setIsPlaying(true);
   }, [highlightClips, canPlay]);
 
@@ -293,10 +292,10 @@ export const useVideoPlayer = ({
       if (!isPlaying) {
         seekToClip(video, currentClipIndex, highlightClips);
       }
-      playVideo(video);
+      playVideo();
       setIsPlaying(true);
     } else {
-      pauseVideo(video);
+      pauseVideo();
       setIsPlaying(false);
     }
   }, [canPlay, isPlaying, highlightClips, currentClipIndex]);
@@ -314,7 +313,7 @@ export const useVideoPlayer = ({
 
     // Continue playing if was playing
     if (isPlaying) {
-      playVideo(video);
+      playVideo();
     }
   }, [highlightClips.length, currentClipIndex, isPlaying, canPlay]);
 
@@ -331,7 +330,7 @@ export const useVideoPlayer = ({
 
     // Continue playing if was playing
     if (isPlaying) {
-      playVideo(video);
+      playVideo();
     }
   }, [highlightClips.length, currentClipIndex, isPlaying, canPlay]);
 
@@ -339,18 +338,27 @@ export const useVideoPlayer = ({
    * Seek to specific time in video
    * Only allows seeking within selected clips
    */
-  const seekTo = useCallback((time: number) => {
-    const video = videoRef.current;
-    if (!video || !canPlay) return;
+  const seekTo = useCallback(
+    (time: number) => {
+      const video = videoRef.current;
+      if (!video || !canPlay) return;
 
-    // Check if the time is within any selected clip
-    const clipIndex = findClipIndex(time, highlightClips);
+      // Check if the time is within any selected clip
+      const clipIndex = findClipIndex(time, highlightClips);
 
-    if (clipIndex >= 0) {
-      setCurrentClipIndex(clipIndex);
-      video.currentTime = time;
-    }
-  }, [canPlay, highlightClips]);
+      if (clipIndex >= 0) {
+        setCurrentClipIndex(clipIndex);
+        video.currentTime = time;
+      } else {
+        // If time is not within clips, seek to the first clip
+        if (highlightClips.length > 0) {
+          setCurrentClipIndex(0);
+          video.currentTime = highlightClips[0].startTime;
+        }
+      }
+    },
+    [canPlay, highlightClips]
+  );
 
   /**
    * Toggle subtitle visibility

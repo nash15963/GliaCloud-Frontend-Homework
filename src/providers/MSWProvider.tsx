@@ -26,13 +26,7 @@ export const MSWProvider = ({ children }: MSWProviderProps) => {
         setIsReady(true);
         return;
       }
-
-      // Only enable MSW in development
-      if (process.env.NODE_ENV !== 'development') {
-        setIsReady(true);
-        return;
-      }
-
+      
       try {
         const { worker } = await import('../mocks/browser');
         

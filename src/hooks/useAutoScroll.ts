@@ -28,7 +28,7 @@ const calculateScrollPosition = (
  * @param throttleMs - Throttle delay in milliseconds (default: 100ms)
  * @returns Object containing containerRef and activeItemRef
  */
-export const useAutoScroll = ({ triggerReload, throttleMs = 3000 }: Props) => {
+export const useAutoScroll = ({ triggerReload, throttleMs = 4000 }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const activeItemRef = useRef<HTMLDivElement>(null);
 

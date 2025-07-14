@@ -18,8 +18,8 @@ interface Clip {
 
 interface CustomVideoPlayerProps {
   src: string;
-  subtitles?: Subtitle[];
-  highlightClips?: Clip[];
+  subtitles: Subtitle[];
+  highlightClips: Clip[];
   currentTimestamp: number | null;
   onTimestampHandled: () => void;
   onTimeUpdate: (time: number) => void;

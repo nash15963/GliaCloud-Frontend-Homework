@@ -1,4 +1,4 @@
-import { useEffect, useState, type Dispatch, type RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 
 interface Clip {
   startTime: number;
@@ -11,7 +11,7 @@ interface ClipProgressBarProps {
   duration: number;
   highlightClips: Clip[];
   isPlayingClips: boolean;
-  setCurrentClipIndex: Dispatch<React.SetStateAction<number>>;
+  setCurrentClipIndex: (index: number) => void;
 }
 
 // Pure function to format time
@@ -46,7 +46,7 @@ const seekToTime = (
   time: number,
   isPlayingClips: boolean,
   clips: Clip[],
-  setCurrentClipIndex: Dispatch<React.SetStateAction<number>>
+  setCurrentClipIndex: (index: number) => void
 ) => {
   const video = videoRef.current;
   if (!video) return;
@@ -125,7 +125,6 @@ const ClipProgressBar = ({
   return (
     <div className="flex items-center gap-3">
       <span className="text-sm text-gray-500 font-mono min-w-max">{formatTime(currentTime)}</span>
-
       <div className="flex-1 relative">
         {/* Time preview tooltip - positioned outside the overflow-hidden container */}
         {hoverTime !== null && duration > 0 && (
@@ -138,9 +137,8 @@ const ClipProgressBar = ({
             {formatTime(hoverTime)}
           </div>
         )}
-        
         <div
-          className="relative w-full h-3 bg-gray-200 rounded-lg overflow-hidden cursor-pointer select-none"
+          className="relative w-full h-4 bg-gray-200 rounded-lg overflow-hidden select-none"
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setHoverTime(null)}
           onMouseDown={handleMouseDown}
@@ -152,8 +150,8 @@ const ClipProgressBar = ({
           {/* Highlight clips */}
           {highlightClips.map((clip, index) => (
             <div
-              key={index}
-              className="absolute h-full bg-blue-500"
+              key={`clip-${index}`}
+              className="absolute h-full bg-blue-500 cursor-pointer"
               style={{
                 left: `${duration > 0 ? (clip.startTime / duration) * 100 : 0}%`,
                 width: `${duration > 0 ? ((clip.endTime - clip.startTime) / duration) * 100 : 0}%`,
@@ -170,7 +168,6 @@ const ClipProgressBar = ({
           />
         </div>
       </div>
-      
       <span className="text-sm text-gray-500 font-mono min-w-max">{formatTime(duration)}</span>
     </div>
   );
