@@ -37,10 +37,43 @@ const getSelectedHighlightsContent = (
     }));
 };
 
+// Pure function to merge overlapping/continuous time ranges
+const mergeTimeRanges = (selectedContent: ReturnType<typeof getSelectedHighlightsContent>) => {
+  if (selectedContent.length === 0) return [];
+  
+  const merged = [];
+  let currentRange = {
+    startTime: selectedContent[0].startTime,
+    endTime: selectedContent[0].endTime
+  };
+  
+  for (let i = 1; i < selectedContent.length; i++) {
+    const current = selectedContent[i];
+    
+    // If current segment starts at or before the end of the current range, merge them
+    if (current.startTime <= currentRange.endTime) {
+      currentRange.endTime = Math.max(currentRange.endTime, current.endTime);
+    } else {
+      // No overlap, push the current range and start a new one
+      merged.push(currentRange);
+      currentRange = {
+        startTime: current.startTime,
+        endTime: current.endTime
+      };
+    }
+  }
+  
+  // Push the last range
+  merged.push(currentRange);
+  
+  return merged;
+};
+
 // Pure function to format time ranges
 const formatTimeRanges = (selectedContent: ReturnType<typeof getSelectedHighlightsContent>): string => {
-  return selectedContent.map(item => 
-    `${formatTime(item.startTime)} - ${formatTime(item.endTime)}`
+  const mergedRanges = mergeTimeRanges(selectedContent);
+  return mergedRanges.map(range => 
+    `${formatTime(range.startTime)} - ${formatTime(range.endTime)}`
   ).join('\n');
 };
 
