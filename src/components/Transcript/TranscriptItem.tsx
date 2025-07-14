@@ -52,48 +52,36 @@ const TranscriptItem = ({
   const isHighlighted = isCurrentlyPlaying(currentTime, scriptItem.startTime, scriptItem.endTime);
   const isSelected = selectedHighlights.includes(scriptItem.id);
 
-  const handleCheckboxChange = () => {
-    onHighlightToggle(scriptItem.id);
+  const handleParentClick = () => {
+    onTimestampClick(scriptItem.startTime);
+    if (!isSelected) {
+      onHighlightToggle(scriptItem.id);
+    }
   };
 
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-  };
-
-  const handleTimestampClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onTimestampClick(scriptItem.startTime);
-  };
-
-  const handleTextClick = () => {
-    onTimestampClick(scriptItem.startTime);
+    onHighlightToggle(scriptItem.id);
   };
 
   return (
     <div
       ref={isHighlighted ? activeItemRef : null}
       className={getItemClassName(isHighlighted, isSelected)}
+      onClick={handleParentClick}
     >
       <div className="flex items-start gap-3">
         <input
           type="checkbox"
           checked={isSelected}
-          onChange={handleCheckboxChange}
           onClick={handleCheckboxClick}
           className="mt-1 w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
         />
-        
-        <span 
-          className="text-xs text-gray-500 font-mono min-w-max hover:text-blue-600 cursor-pointer"
-          onClick={handleTimestampClick}
-        >
+        <span className="text-xs text-gray-500 font-mono min-w-max hover:text-blue-600">
           {formatTimestamp(scriptItem.startTime)}
         </span>
         
-        <span 
-          className="text-sm text-gray-800 cursor-pointer flex-1"
-          onClick={handleTextClick}
-        >
+        <span className="text-sm text-gray-800 flex-1">
           {scriptItem.text}
         </span>
       </div>
