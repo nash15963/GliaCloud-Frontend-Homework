@@ -44,9 +44,11 @@ function App() {
         justifyContent: "space-around",
       }}>
       {/* Left side - Transcript */}
-      <TranscriptBlock 
-        isLoading={videoDataMutaion.isPending || checkVideoStatus.isLoading || videoProcessMutation.isPending}
-        isError={videoDataMutaion.isError || checkVideoStatus.isError}
+      <TranscriptBlock
+        state={{
+          loading: videoDataMutaion.isPending || checkVideoStatus.isLoading || videoProcessMutation.isPending,
+          error: videoDataMutaion.isError || checkVideoStatus.isError,
+        }}
         data={videoDataMutaion.data?.data}
         onTimestampClick={setCurrentTimestamp}
         currentTime={currentTime}
@@ -56,15 +58,17 @@ function App() {
 
       {/* Right side - Preview */}
       <VideoPlayerBlock
+        data={videoDataMutaion.data?.data}
+        state={{
+          loading: videoDataMutaion.isPending || checkVideoStatus.isLoading || videoProcessMutation.isPending,
+          error: videoDataMutaion.isError || checkVideoStatus.isError,
+          success: videoDataMutaion.isSuccess,
+        }}
         handleVideoProcess={videoProcessMutation.mutate}
         currentTimestamp={currentTimestamp}
         onTimestampHandled={() => setCurrentTimestamp(null)}
         onTimeUpdate={setCurrentTime}
-        videoDataMutation={videoDataMutaion}
         selectedHighlights={selectedHighlights}
-        state={{
-          videoProcessMutation,
-        }}
       />
     </div>
   );

@@ -15,9 +15,11 @@ interface TransformSection {
   }>;
 }
 interface Props {
-  isLoading: boolean;
-  isError: boolean;
   data: TRawVideoData;
+  state: {
+    loading: boolean;
+    error: boolean;
+  };
   onTimestampClick: (timestamp: number) => void;
   currentTime?: number;
   selectedHighlights?: string[];
@@ -71,9 +73,8 @@ const getSuggestedHighlights = (videoData?: TRawVideoData): string[] => {
 };
 
 const TranscriptBlock = ({ 
-  isLoading,
-  isError,
   data, 
+  state,
   onTimestampClick, 
   currentTime = 0, 
   selectedHighlights = [], 
@@ -116,30 +117,30 @@ const TranscriptBlock = ({
             <button
               onClick={applySuggestedHighlights}
               className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors duration-200"
-              disabled={isLoading}
+              disabled={state.loading}
             >
               Apply AI Suggestions
             </button>
             <button
               onClick={() => onHighlightToggle([])}
               className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors duration-200"
-              disabled={isLoading || selectedHighlights.length === 0}
+              disabled={state.loading || selectedHighlights.length === 0}
             >
               Clear All
             </button>
           </div>
         )}
       </div>
-      
-      {isLoading && (
+
+      {state.loading && (
         <div className="text-gray-500">Loading transcript...</div>
       )}
 
-      {isError && (
+      {state.error && (
         <div className="text-red-500">Error loading transcript</div>
       )}
-      
-      {transformedData.length === 0 && !isLoading && (
+
+      {transformedData.length === 0 && !state.loading && (
         <div className="text-gray-500">No transcript content available</div>
       )}
       

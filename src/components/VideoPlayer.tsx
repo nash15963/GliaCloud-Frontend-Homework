@@ -431,7 +431,7 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
   }, [currentTimestamp]);
 
   return (
-    <div className="video-player-wrapper flex flex-col gap-3">
+    <div className="video-player-wrapper flex flex-col gap-3 w-[90%]">
       {/* Video playback area with subtitle overlay - Fixed aspect ratio */}
       <div className="rounded-xl overflow-hidden shadow-md w-full bg-black relative aspect-video">
         <video
