@@ -281,23 +281,29 @@ export const useVideoPlayer = ({
 
   /**
    * Toggle between play and pause states
-   * Only works if clips are selected
+   * Always allows pausing if video is playing, only requires clips for starting playback
    */
   const togglePlayPause = useCallback(() => {
     const video = videoRef.current;
-    if (!video || !canPlay) return;
+    if (!video) return;
 
-    if (video.paused) {
-      // If not currently playing any clip, start from the current clip index
-      if (!isPlaying) {
-        seekToClip(video, currentClipIndex, highlightClips);
-      }
-      playVideo();
-      setIsPlaying(true);
-    } else {
+    // Handle pausing - always allow if video is playing
+    if (!video.paused) {
       pauseVideo();
       setIsPlaying(false);
+      return;
     }
+
+    // Handle playing - only allow if clips are available
+    if (!canPlay) return;
+    
+    // Seek to clip if not already playing
+    if (!isPlaying) {
+      seekToClip(video, currentClipIndex, highlightClips);
+    }
+    
+    playVideo();
+    setIsPlaying(true);
   }, [canPlay, isPlaying, highlightClips, currentClipIndex]);
 
   /**

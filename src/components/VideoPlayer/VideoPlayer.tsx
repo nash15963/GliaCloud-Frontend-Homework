@@ -83,7 +83,7 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
           <ControlButton
             variant="green"
             onClick={togglePlayPause}
-            disabled={isLoading || !canPlay}
+            disabled={isLoading || (!canPlay && !isPlaying)}
           >
             {isPlaying ? <PauseIcon className="w-4 h-4" /> : <PlayIcon className="w-4 h-4" />}
           </ControlButton>
