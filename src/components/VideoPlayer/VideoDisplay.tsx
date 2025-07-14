@@ -1,18 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
+interface Subtitle {
+  startTime: number;
+  endTime: number;
+  text: string;
+}
 
 interface VideoDisplayProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   isLoading: boolean;
-  currentSubtitle: string;
   showSubtitles: boolean;
+  subtitles: Subtitle[];
+  currentTime: number;
 }
 
 const VideoDisplay = ({
   videoRef,
   isLoading,
-  currentSubtitle,
-  showSubtitles
+  showSubtitles,
+  subtitles,
+  currentTime
 }: VideoDisplayProps) => {
+  const [currentSubtitle, setCurrentSubtitle] = useState<string>("");
+
+  // Update current subtitle based on current time
+  useEffect(() => {
+    const activeSubtitle = subtitles.find(subtitle => 
+      currentTime >= subtitle.startTime && currentTime <= subtitle.endTime
+    );
+    setCurrentSubtitle(activeSubtitle?.text || "");
+  }, [currentTime, subtitles]);
   return (
     <div className="rounded-xl overflow-hidden shadow-md w-full bg-black relative aspect-video">
       <video

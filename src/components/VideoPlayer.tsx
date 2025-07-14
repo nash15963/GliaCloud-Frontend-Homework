@@ -30,13 +30,16 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlayingClips, setIsPlayingClips] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentSubtitle, setCurrentSubtitle] = useState<string>("");
+  
+  
   const [showSubtitles, setShowSubtitles] = useState<boolean>(true);
+  
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentClipIndex, setCurrentClipIndex] = useState(0);
-  const [isPlayingClips, setIsPlayingClips] = useState(false);
+  
 
   const initializeHls = useCallback(() => {
     const video = videoRef.current;
@@ -180,13 +183,6 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
   }, []);
 
 
-  // Find current subtitle based on current time
-  const updateCurrentSubtitle = useCallback((time: number) => {
-    const activeSubtitle = subtitles.find(subtitle => 
-      time >= subtitle.startTime && time <= subtitle.endTime
-    );
-    setCurrentSubtitle(activeSubtitle?.text || "");
-  }, [subtitles]);
 
   useEffect(() => {
     if (src) {
@@ -210,7 +206,6 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
       const currentVideoTime = video.currentTime;
       setCurrentTime(currentVideoTime);
       onTimeUpdate?.(currentVideoTime);
-      updateCurrentSubtitle(currentVideoTime);
 
       // Check if we're playing clips and need to jump to next clip
       if (isPlayingClips && highlightClips.length > 0) {
@@ -268,7 +263,7 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('canplay', handleCanPlay);
       };
-  }, [updateCurrentSubtitle, isPlayingClips, highlightClips, currentClipIndex]);
+  }, [isPlayingClips, highlightClips, currentClipIndex, onTimeUpdate]);
 
 
 
@@ -290,8 +285,9 @@ const CustomVideoPlayer = ({ src, currentTimestamp, onTimestampHandled, onTimeUp
       <VideoDisplay
         videoRef={videoRef}
         isLoading={isLoading}
-        currentSubtitle={currentSubtitle}
         showSubtitles={showSubtitles}
+        subtitles={subtitles}
+        currentTime={currentTime}
       />
 
       <div className="flex flex-col gap-3 p-4 bg-gray-50 rounded-lg">
