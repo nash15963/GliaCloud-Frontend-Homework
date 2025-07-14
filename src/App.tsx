@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import "./App.css";
 import TranscriptBlock from "./components/TranscriptBlock";
 import VideoPlayerBlock from "./components/VideoPlayerBlock";
+import WelcomeDialog from "./components/dialog/WelcomeDialog";
 import { videoApi } from "./services/video";
 import { useEffect, useState } from "react";
 
@@ -38,39 +39,44 @@ function App() {
   }, [checkVideoStatus.data?.data?.status]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-around",
-      }}>
-      {/* Left side - Transcript */}
-      <TranscriptBlock
-        state={{
-          loading: videoDataMutaion.isPending || checkVideoStatus.isLoading || videoProcessMutation.isPending,
-          error: videoDataMutaion.isError || checkVideoStatus.isError,
-        }}
-        data={videoDataMutaion.data?.data}
-        onTimestampClick={setCurrentTimestamp}
-        currentTime={currentTime}
-        selectedHighlights={selectedHighlights}
-        onHighlightToggle={setSelectedHighlights}
-      />
+    <>
+      {/* Welcome Dialog */}
+      <WelcomeDialog />
+      
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-around",
+        }}>
+        {/* Left side - Transcript */}
+        <TranscriptBlock
+          state={{
+            loading: videoDataMutaion.isPending || checkVideoStatus.isLoading || videoProcessMutation.isPending,
+            error: videoDataMutaion.isError || checkVideoStatus.isError,
+          }}
+          data={videoDataMutaion.data?.data}
+          onTimestampClick={setCurrentTimestamp}
+          currentTime={currentTime}
+          selectedHighlights={selectedHighlights}
+          onHighlightToggle={setSelectedHighlights}
+        />
 
-      {/* Right side - Preview */}
-      <VideoPlayerBlock
-        data={videoDataMutaion.data?.data}
-        state={{
-          loading: videoDataMutaion.isPending || checkVideoStatus.isLoading || videoProcessMutation.isPending,
-          error: videoDataMutaion.isError || checkVideoStatus.isError,
-          success: videoDataMutaion.isSuccess,
-        }}
-        handleVideoProcess={videoProcessMutation.mutate}
-        currentTimestamp={currentTimestamp}
-        onTimestampHandled={() => setCurrentTimestamp(null)}
-        onTimeUpdate={setCurrentTime}
-        selectedHighlights={selectedHighlights}
-      />
-    </div>
+        {/* Right side - Preview */}
+        <VideoPlayerBlock
+          data={videoDataMutaion.data?.data}
+          state={{
+            loading: videoDataMutaion.isPending || checkVideoStatus.isLoading || videoProcessMutation.isPending,
+            error: videoDataMutaion.isError || checkVideoStatus.isError,
+            success: videoDataMutaion.isSuccess,
+          }}
+          handleVideoProcess={videoProcessMutation.mutate}
+          currentTimestamp={currentTimestamp}
+          onTimestampHandled={() => setCurrentTimestamp(null)}
+          onTimeUpdate={setCurrentTime}
+          selectedHighlights={selectedHighlights}
+        />
+      </div>
+    </>
   );
 }
 
